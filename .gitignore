@@ -5,6 +5,7 @@
 .idea/
 .vscode/
 venv/
+call_tad_cliques/version.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
