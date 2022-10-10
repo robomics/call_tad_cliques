@@ -21,14 +21,13 @@ def __map_interchrom_interactions_to_segments(trans_interactions: pd.DataFrame, 
     df1["start2"] = np.array((df1["start2"] + df1["end2"]) / 2, dtype=int)
     df1["end2"] = df1["start2"] + 1
 
-    df2 = bf.overlap(df1, segments, how="left", cols1=["chrom1", "start1", "end1"], suffixes=["__", "1"])  # noqa
-    df3 = bf.overlap(df1, segments, how="left", cols1=["chrom2", "start2", "end2"], suffixes=["__", "2"])  # noqa
+    df2 = bf.overlap(segments, df1, how="left", cols2=["chrom1", "start1", "end1"], suffixes=["1", "__"])  # noqa
+    df3 = bf.overlap(segments, df1, how="left", cols2=["chrom2", "start2", "end2"], suffixes=["2", "__"])  # noqa
 
     df4 = df2[["chrom1", "start1", "end1"]].copy()
     df4[["chrom2", "start2", "end2"]] = df3[["chrom2", "start2", "end2"]]
-    df4["pvalue_corrected"] = df3["pvalue_corrected__"].tolist()
 
-    return df4.sort_values(by=["chrom1", "start1", "chrom2", "start2"]).dropna().reset_index(drop=True)
+    return df4.sort_values(by=["chrom1", "start1", "chrom2", "start2"]).dropna().drop_duplicates().reset_index(drop=True)
 
 
 def __identify_significant_trans_interactions(path_to_cooler: Union[pathlib.Path, str],

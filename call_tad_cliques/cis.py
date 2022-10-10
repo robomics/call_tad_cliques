@@ -102,9 +102,9 @@ def __identify_significant_cis_interactions(segments: pd.DataFrame,
 
         df = run_nchg_and_generate_df(tmpbedpe.name, nchg_bin, method="intra", resolution=resolution)
 
-    if len(df) > 0:
-        df = correct_nchg_pvalue_and_mark_significant_interactions(df, multiple_test_correction_method, log_ratio_thresh,
-                                                                   fdr_thresh)
+    assert len(df) > 0
+    df = correct_nchg_pvalue_and_mark_significant_interactions(df, multiple_test_correction_method, log_ratio_thresh,
+                                                               fdr_thresh)
 
     num_significant_interactions = df["significant"].sum()
     logging.info(f"DONE! Identified {num_significant_interactions}/{len(df)} significant cis-regions")
@@ -114,8 +114,6 @@ def __identify_significant_cis_interactions(segments: pd.DataFrame,
 def process_cis_interactions(path_to_cooler, resolution, segments, odd_log_ratio_thresh, fdr_thresh, nchg_bin, mp_pool):
     cis_df = __map_intrachrom_interactions_to_segments(f"{path_to_cooler}::/resolutions/{resolution}", segments, mp_pool)
 
-    # cis_df.to_csv("/tmp/cis_001.tsv", sep="\t", header=False, index=False)
-
     cis_df = mp_pool.apply_async(__identify_significant_cis_interactions,
                                  args=[cis_df,
                                        resolution,
@@ -124,6 +122,4 @@ def process_cis_interactions(path_to_cooler, resolution, segments, odd_log_ratio
                                        "fdr_bh",
                                        nchg_bin])
 
-    cis_df = cis_df.get()
-    # cis_df.to_csv("/tmp/cis_002.tsv", sep="\t", header=False, index=False)
-    return cis_df
+    return cis_df.get()

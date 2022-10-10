@@ -82,14 +82,17 @@ def main():
         cis_df = cis_df.result()
         trans_df = trans_df.result()
 
+    cis_df = cis_df[cis_df["significant"]]
+
     cis_df.to_csv("/tmp/cis_df.tsv", sep="\t", index=False)
     trans_df.to_csv("/tmp/trans_df.tsv", sep="\t", index=False)
 
-    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2", "pvalue_corrected"]
-    interactions = pd.concat([cis_df[columns], trans_df[columns]]).reset_index()
+    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
+    interactions = pd.concat([cis_df[columns], trans_df[columns]]).sort_values(by=columns).reset_index()
+    interactions.to_csv("/tmp/interactions.tsv", sep="\t", index=False)
 
     for chrom in cooler.Cooler(f"{path_to_cooler}::/resolutions/50000").chromnames:
-        clique_stats, clique_interactions, tad_interactions, clique_sizes = call_cliques.call_cliques(segments, interactions, chrom, 4)
+        clique_stats, clique_interactions, tad_interactions, clique_sizes = call_cliques.call_cliques(segments, interactions, chrom, 5)
         clique_stats.to_csv("/tmp/clique_stats.tsv", sep="\t", index=False)
         clique_interactions.to_csv("/tmp/clique_interactions.tsv", sep="\t", index=False)
         tad_interactions.to_csv("/tmp/tad_interactions.tsv", sep="\t", index=False)
