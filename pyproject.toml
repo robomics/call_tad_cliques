@@ -1,8 +1,63 @@
 # Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
 # SPDX-License-Identifier: MIT
 
+[build-system]
+requires = ["setuptools>=45", "setuptools-scm>=7.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[project]
+
+name = "call-tad-cliques"
+description = "TODO"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "MIT License" }
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Windows :: Windows",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+
+dependencies = [
+    "bioframe>=0.3",
+    "cooler>=0.8",
+    'importlib-metadata; python_version<"3.8"',
+    "networkx>=1.23",
+    "numpy>=1.20",
+    "scipy>=1.9",
+    "statsmodels>=0.13"
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = ["pytest>=5.3"]
+devel = [
+    "autopep8",
+    "pep8"
+]
+all = [
+    "call-tad-cliques[test]",
+    "call-tad-cliques[devel]"
+]
+
+[project.scripts]
+call-tad-cliques = "call_tad_cliques.__main__:main"
+
 [tool.setuptools_scm]
-write_to = "call_tad_cliques/version.py"
-git_describe_command = "git describe --dirty --tags --long --match v* --first-parent"
+write_to = "call_tad_cliques/_version.py"
+
+[tool.setuptools.packages.find]
+include = ["call_tad_cliques*"]
+exclude = ["call_tad_cliques.tests*"]
+
+[tool.black]
+line-length = 120
+target-version = ["py37"]

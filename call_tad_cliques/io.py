@@ -35,7 +35,8 @@ def import_assembly_gaps(path: Union[pathlib.Path, str], format: str = "json") -
 
     if format not in supported_formats:
         raise RuntimeError(
-            f"Unknown format \"{format}\". Supported formats: " + ", ".join([f for f in supported_formats]))
+            f'Unknown format "{format}". Supported formats: ' + ", ".join([f for f in supported_formats])
+        )
 
     if format == "json":
         return bf.from_list(__array_json_to_bed(path), cols=["chrom", "start", "end"])
@@ -45,9 +46,9 @@ def import_assembly_gaps(path: Union[pathlib.Path, str], format: str = "json") -
         return bf.read_table(path, schema="bed3")
 
 
-def import_chrom_sizes(path_to_cooler: Union[pathlib.Path, str]) -> pd.DataFrame:
-    logging.info(f"Reading chrom sizes from {path_to_cooler}...")
-    chroms = bf.from_dict(cooler.Cooler(str(path_to_cooler)).chromsizes)
+def import_chrom_sizes(cf: cooler.Cooler) -> pd.DataFrame:
+    logging.info(f"Importing chromosomes from {cf.uri}...")
+    chroms = bf.from_dict(cf.chromsizes)
     logging.info(f"Imported {len(chroms)} chromosomes")
     return chroms
 

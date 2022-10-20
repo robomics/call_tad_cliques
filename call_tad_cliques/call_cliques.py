@@ -83,9 +83,7 @@ class Interaction3D:
         return str(self) == str(other)
 
 
-def __parse_gtrack_header(line: str,
-                          required_fields=tuple(["seqid", "start", "end",
-                                                 "id", "radius", "edges"])):
+def __parse_gtrack_header(line: str, required_fields=tuple(["seqid", "start", "end", "id", "radius", "edges"])):
     header = tuple(line.replace("###", "").split())
     for field in required_fields:
         if field not in header:
@@ -97,9 +95,7 @@ def __parse_gtrack_header(line: str,
 __GTrackRecord = namedtuple("__GTrackRecord", ["chrom", "start", "end", "id", "radius"])
 
 
-def __parse_gtrack_record(line: str, header: tuple) -> Tuple[__GTrackRecord,
-                                                             Bead3D,
-                                                             Union[tuple, None]]:
+def __parse_gtrack_record(line: str, header: tuple) -> Tuple[__GTrackRecord, Bead3D, Union[tuple, None]]:
     record = dict(zip(header, line.split()))
 
     edges = record["edges"]
@@ -108,24 +104,16 @@ def __parse_gtrack_record(line: str, header: tuple) -> Tuple[__GTrackRecord,
     else:
         edges = None
 
-    record = __GTrackRecord(record["seqid"],
-                            record["start"],
-                            record["end"],
-                            record["id"],
-                            record["radius"])
+    record = __GTrackRecord(record["seqid"], record["start"], record["end"], record["id"], record["radius"])
 
-    bead = Bead3D(record.chrom,
-                  record.start,
-                  record.end,
-                  record.radius,
-                  record.id)
+    bead = Bead3D(record.chrom, record.start, record.end, record.radius, record.id)
 
     return record, bead, edges
 
 
 def __read_gtrack_file(path_to_gtrack_file: Union[pathlib.Path, str]) -> Tuple[set, list]:
-    """ Reads data as GTrack file
-        OBS: Does no actual sanity check on the file format
+    """Reads data as GTrack file
+    OBS: Does no actual sanity check on the file format
     """
     res = {}
     idpairs = []
@@ -176,8 +164,9 @@ def __compute_clique_stats(cliques) -> pd.DataFrame:
         clique_str = ";".join((str(x) for x in sorted(clique)))
         records.append([clique[0].getChrom(True), i, len(clique), f"CLICSTAT # {clique_str}"])
 
-    return pd.DataFrame(records, columns=["chrom", "bead1_id", "bead2_id", "comment"]) \
-        .sort_values(by=["chrom", "bead1_id", "bead2_id"])
+    return pd.DataFrame(records, columns=["chrom", "bead1_id", "bead2_id", "comment"]).sort_values(
+        by=["chrom", "bead1_id", "bead2_id"]
+    )
 
 
 def __map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.DataFrame]:
@@ -189,10 +178,10 @@ def __map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd
             clique_interactions.add(Interaction3D(node1, node2))
     records = [list(n1.getCoords()) + list(n2.getCoords()) for n1, n2 in clique_interactions]
 
-    columns = ["chrom1", "start1", "end1",
-               "chrom2", "start2", "end2"]
-    return clique_interactions, \
-           pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "chrom2", "start2"])
+    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
+    return clique_interactions, pd.DataFrame(records, columns=columns).sort_values(
+        by=["chrom1", "start1", "chrom2", "start2"]
+    )
 
 
 def __map_tad_interactions(interactions: set, clique_interactions: set, chrom: str) -> pd.DataFrame:
@@ -214,7 +203,7 @@ def __compute_clique_sizes(tad_graph) -> pd.DataFrame:
     return pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start"])
 
 
-def __preprocess_data(segments: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[set, list]:
+def __preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[set, list]:
     segment_dict = {}
     for interaction in interactions.itertuples(index=False):
         id1 = f"{interaction.chrom1}:{interaction.start1}-{interaction.end1}"
@@ -225,7 +214,7 @@ def __preprocess_data(segments: pd.DataFrame, interactions: pd.DataFrame) -> Tup
 
     combined_dict = {}
 
-    for segment in segments.itertuples(index=False):
+    for segment in domains.itertuples(index=False):
         segment_id = f"{segment.chrom}:{segment.start}-{segment.end}"
         combined_dict[segment_id] = segment_dict[segment_id] if segment_id in segment_dict else "."
 
@@ -244,11 +233,7 @@ def __preprocess_data(segments: pd.DataFrame, interactions: pd.DataFrame) -> Tup
     beads = []
 
     for row in data.itertuples(index=False):
-        bead = Bead3D(row.chrom,
-                      row.start,
-                      row.end,
-                      row.radius,
-                      row.id)
+        bead = Bead3D(row.chrom, row.start, row.end, row.radius, row.id)
 
         id2bead[row.id] = bead
         beads.append(bead)
@@ -264,11 +249,10 @@ def __preprocess_data(segments: pd.DataFrame, interactions: pd.DataFrame) -> Tup
     return interacting_beads, beads
 
 
-def call_cliques(segments: pd.DataFrame, interactions: pd.DataFrame, chrom: str, clique_size_thresh: int) -> Tuple[pd.DataFrame,
-                                                                                                                   pd.DataFrame,
-                                                                                                                   pd.DataFrame,
-                                                                                                                   pd.DataFrame]:
-    interactions, beads = __preprocess_data(segments, interactions)
+def call_cliques(
+    domains: pd.DataFrame, interactions: pd.DataFrame, chrom: str, clique_size_thresh: int
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    interactions, beads = __preprocess_data(domains, interactions)
     # interactions, beads = __read_gtrack_file(path_to_gtrack)
 
     tad_graph = __build_tad_graph(beads, interactions, chrom)
