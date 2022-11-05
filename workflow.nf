@@ -11,16 +11,31 @@ workflow {
     trans_coolers = Channel.fromPath(params.mcools)
                            .map { tuple(it.getBaseName(), it, params.trans_bin_size) }
 
-    extract_chrom_sizes_from_cooler(trans_coolers)
+    if (params.tads) {
+        // TADs are expected to have the same prefix as the cooler files
+        tads = Channel.fromPath(params.tads)
+                      .map { tuple(it.getBaseName(), it) }
+    } else {
+        hicexplorer_find_tads(cis_coolers)
+        tads = hicexplorer_find_tads.out.bed
+    }
+
+
+    extract_chrom_sizes_from_cooler(trans_coolers.first())
     generate_bed_mask(file(params.assembly_gaps), file(params.cytoband))
 
     chrom_sizes = extract_chrom_sizes_from_cooler.out.chrom_sizes
-    mask = generate_bed_mask.out.bed.collect()
+    mask = generate_bed_mask.out.bed
 
-    tads_to_domains(chrom_sizes, file(params.tads))
-    domains = bedtools_bed_setdiff(tads_to_domains.out.bed, mask)
+    tads_to_domains(tads, chrom_sizes)
+    bedtools_bed_setdiff(tads_to_domains.out.bed, mask)
+    domains = bedtools_bed_setdiff.out.bed
 
-    map_intrachrom_interactions(cis_coolers, domains)
+    map_intrachrom_interactions(
+        cis_coolers.join(domains,
+                         failOnMismatch: true,
+                         failOnDuplicate: true))
+
     collect_interchrom_interactions(trans_coolers, mask)
 
     select_significant_intrachrom_interactions(map_intrachrom_interactions.out.bedpe,
@@ -32,11 +47,21 @@ workflow {
                                                params.trans_log_ratio,
                                                params.trans_fdr)
 
-    map_interchrom_interactions_to_domains(domains,
-                                           select_significant_interchrom_interactions.out.bedpe)
+    map_interchrom_interactions_to_domains(select_significant_interchrom_interactions
+              .out
+              .bedpe
+              .join(domains,
+                    failOnMismatch: true,
+                    failOnDuplicate: true)
+        )
 
-    // TODO need to pair samples before processing
-    // merge_interactions()
+    merge_interactions(select_significant_intrachrom_interactions
+              .out
+              .bedpe
+              .join(map_interchrom_interactions_to_domains.out.bedpe,
+                    failOnMismatch: true,
+                    failOnDuplicate: true)
+        )
 }
 
 process extract_chrom_sizes_from_cooler {
@@ -46,7 +71,6 @@ process extract_chrom_sizes_from_cooler {
         tuple val(sample), path(cooler), val(resolution)
 
     output:
-        val sample, emit: sample
         path "*.chrom.sizes", emit: chrom_sizes
 
     shell:
@@ -99,18 +123,52 @@ process generate_bed_mask {
         '''
 }
 
+process hicexplorer_find_tads {
+    label 'process_medium'
+
+    input:
+        tuple val(sample), path(cooler), val(resolution)
+
+    output:
+        tuple val(sample), path("*_tads.bed.zst"), emit: bed
+
+    shell:
+        outprefix="${cooler.baseName}"
+        '''
+        if [ '!{resolution}' -ne 0 ]; then
+            cooler='!{cooler}::/resolutions/!{resolution}'
+        else
+            cooler='!{cooler}'
+        fi
+
+        hicFindTADs -p '!{task.cpus}'          \
+                    --matrix "$cooler"         \
+                    --outPrefix '!{outprefix}' \
+                    --correctForMultipleTesting fdr
+
+        ls -lah
+
+        zstd -T!{task.cpus}                  \
+             -!{params.zstd_compression_lvl} \
+             '!{outprefix}_domains.bed'
+
+        mv '!{outprefix}_domains.bed.zst' '!{outprefix}_tads.bed.zst'
+        '''
+}
+
 process tads_to_domains {
     publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
+        tuple val(sample), path(tads)
         path chrom_sizes
-        path tads
 
     output:
-        path "domains.bed.zst", emit: bed
+        tuple val(sample), path("*_domains.bed.zst"), emit: bed
 
     shell:
+        outname="${sample}_domains.bed.zst"
         '''
         set -o pipefail
 
@@ -119,7 +177,7 @@ process tads_to_domains {
             '!{tads}'        |
             zstd -T!{task.cpus}                  \
                  -!{params.zstd_compression_lvl} \
-                 -o domains.bed.zst
+                 -o '!{outname}'
         '''
 }
 
@@ -128,11 +186,10 @@ process map_intrachrom_interactions {
     label 'very_short'
 
     input:
-        tuple val(sample), path(cooler), val(resolution)
-        path domains
+        tuple val(sample), path(cooler), val(resolution), path(domains)
 
     output:
-        path "*.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*.bedpe.zst"), emit: bedpe
 
     shell:
         outname="${sample}_domains_with_cis_interactions.bedpe.zst"
@@ -159,11 +216,11 @@ process bedtools_bedpe_setdiff {
     label 'very_short'
 
     input:
-        path bedpe
+        tuple val(sample), path(bedpe)
         path mask
 
     output:
-        path "*_filtered.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*_filtered.bedpe.zst"), emit: bedpe
 
     shell:
         outname=bed.toString().replace(".bedpe.zst", "_filtered.bedpe.zst")
@@ -184,11 +241,11 @@ process bedtools_bed_setdiff {
     label 'very_short'
 
     input:
-        path bed
+        tuple val(sample), path(bed)
         path mask
 
     output:
-        path "*_filtered.bed.zst", emit: bed
+        tuple val(sample), path("*_filtered.bed.zst"), emit: bed
 
     shell:
         outname=bed.toString().replace(".bed.zst", "_filtered.bed.zst")
@@ -212,7 +269,7 @@ process collect_interchrom_interactions {
         path mask
 
     output:
-        path "*.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*.bedpe.zst"), emit: bedpe
 
     shell:
         outname="${cooler.baseName}_trans_interactions.bedpe.zst"
@@ -241,13 +298,13 @@ process select_significant_intrachrom_interactions {
     label 'very_short'
 
     input:
-        path bedpe
+        tuple val(sample), path(bedpe)
         val resolution
         val log_ratio
         val fdr
 
     output:
-        path "*_cis_significant.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*_cis_significant.bedpe.zst"), emit: bedpe
 
     shell:
         outname=bedpe.toString().replace(".bedpe.zst", "_cis_significant.bedpe.zst")
@@ -272,12 +329,12 @@ process select_significant_interchrom_interactions {
     publishDir params.output_dir, mode: 'copy'
 
     input:
-        path bedpe
+        tuple val(sample), path(bedpe)
         val log_ratio
         val fdr
 
     output:
-        path "*_trans_significant.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*_trans_significant.bedpe.zst"), emit: bedpe
 
     shell:
         outname=bedpe.toString().replace(".bedpe.zst", "_trans_significant.bedpe.zst")
@@ -301,11 +358,10 @@ process map_interchrom_interactions_to_domains {
     publishDir params.output_dir, mode: 'copy'
 
     input:
-        path domains
-        path interchrom_interactions
+        tuple val(sample), path(interchrom_interactions), path(domains)
 
     output:
-        path "*.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*.bedpe.zst"), emit: bedpe
 
     shell:
         outname=domains.toString().replace(".bed.zst", "_overlapping_domains.bedpe.zst")
@@ -339,14 +395,13 @@ process merge_interactions {
     publishDir params.output_dir, mode: 'copy'
 
     input:
-        path cis
-        path trans
+        tuple val(sample), path(cis), path(trans)
 
     output:
-        path "*_interactions.bedpe.zst", emit: bedpe
+        tuple val(sample), path("*_interactions.bedpe.zst"), emit: bedpe
 
     shell:
-        outname=cis.toString().replace(".bed.zst", "_interactions.bedpe.zst")
+        outname="${sample}_domains_with_significant_interactions.bedpe.zst"
         '''
         zstdcat *.bedpe.zst                  |
         awk '$1!="." && $4!="."'             |
