@@ -73,8 +73,12 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/${{ github.repository }}:latest
     steps:
-      - name: Run tests
+      - name: Test binaries
         run: |
           bedtools --help
           cooler --help
           NCHG --help
+
+      - name: Test Python libs
+        run: |
+          python3 -c 'import bioframe; import cooler; import networkx'
