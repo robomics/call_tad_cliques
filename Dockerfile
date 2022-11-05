@@ -45,12 +45,6 @@ RUN micromamba install -y \
         --file /tmp/env.yml \
 && micromamba clean --all -y
 
-RUN bedtools --help
-RUN cooler --help
-RUN NCHG --help
-
-RUN python3 -c 'import bioframe; import cooler; import networkx'
-
 WORKDIR /data
 
 ENV PATH="/opt/conda/bin:$PATH"
@@ -58,9 +52,9 @@ ENTRYPOINT ["/usr/local/bin/_entrypoint.sh"]
 CMD ["/bin/bash"]
 
 LABEL org.opencontainers.image.authors='Roberto Rossini <roberros@uio.no>'
-#LABEL org.opencontainers.image.url='https://github.com/robomics/call_tad_cliques'
-#LABEL org.opencontainers.image.documentation='https://github.com/robomics/call_tad_cliques'
-#LABEL org.opencontainers.image.source='https://github.com/robomics/call_tad_cliques'
-#LABEL org.opencontainers.image.licenses='MIT'
-#LABEL org.opencontainers.image.title="${CONTAINER_TITLE:-call-tad-cliques}"
-#LABEL org.opencontainers.image.version="${CONTAINER_VERSION:-latest}"
+LABEL org.opencontainers.image.url='https://github.com/robomics/call_tad_cliques'
+LABEL org.opencontainers.image.documentation='https://github.com/robomics/call_tad_cliques'
+LABEL org.opencontainers.image.source='https://github.com/robomics/call_tad_cliques'
+LABEL org.opencontainers.image.licenses='MIT'
+LABEL org.opencontainers.image.title="${CONTAINER_TITLE:-call-tad-cliques}"
+LABEL org.opencontainers.image.version="${CONTAINER_VERSION:-latest}"

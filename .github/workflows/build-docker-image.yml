@@ -68,3 +68,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=min
           tags: ${{ steps.meta.outputs.tags }}
+
+  test-image:
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository }}:latest
+    steps:
+      - name: Run tests
+        run: |
+          bedtools --help
+          cooler --help
+          NCHG --help
