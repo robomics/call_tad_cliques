@@ -71,6 +71,7 @@ jobs:
 
   test-image:
     runs-on: ubuntu-latest
+    needs: build-image
     container: ghcr.io/${{ github.repository }}:latest
     steps:
       - name: Test binaries
