@@ -1,0 +1,70 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build Docker image
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-docker-image.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "env.yml"
+    tags:
+      - 'v*.*.*'
+
+  pull_request:
+    paths:
+      - ".github/workflows/build-docker-image.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "env.yml"
+
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,priority=1000,pattern={{version}}
+            type=sha,priority=900
+            type=ref,priority=800,event=branch
+            type=ref,priority=700,event=pr
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image and push to registries
+        uses: docker/build-push-action@v3
+        with:
+          context: ${{ github.workspace }}
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+          tags: ${{ steps.meta.outputs.tags }}
