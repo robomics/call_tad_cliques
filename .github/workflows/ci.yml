@@ -1,7 +1,7 @@
 # Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
 # SPDX-License-Identifier: MIT
 
-name: Build Docker image
+name: CI
 
 on:
   push:
