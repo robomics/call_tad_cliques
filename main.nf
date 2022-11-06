@@ -176,9 +176,9 @@ process tads_to_domains {
         '''
         set -o pipefail
 
-        '!{params.script_dir}/convert_tads_to_domains.py' \
-            '!{chrom_sizes}' \
-            '!{tads}'        |
+        convert_tads_to_domains.py  \
+            '!{chrom_sizes}'        \
+            '!{tads}'               |
             zstd -T!{task.cpus}                  \
                  -!{params.zstd_compression_lvl} \
                  -o '!{outname}'
@@ -205,11 +205,11 @@ process map_intrachrom_interactions {
             cooler='!{cooler}::/resolutions/!{resolution}'
         fi
 
-        '!{params.script_dir}/map_intrachrom_interactions_to_domains.py' \
-            "$cooler"         \
-            '!{domains}'      |
-            zstd -T!{task.cpus}                  \
-                 -!{params.zstd_compression_lvl} \
+        map_intrachrom_interactions_to_domains.py  \
+            "$cooler"                              \
+            '!{domains}'                           |
+            zstd -T!{task.cpus}                    \
+                 -!{params.zstd_compression_lvl}   \
                  -o '!{outname}'
         '''
 }
@@ -263,6 +263,8 @@ process bedtools_bed_setdiff {
 }
 
 process collect_interchrom_interactions {
+    label 'long'
+
     input:
         tuple val(sample), path(cooler), val(resolution)
         path mask
@@ -293,7 +295,7 @@ process collect_interchrom_interactions {
 }
 
 process select_significant_intrachrom_interactions {
-    label 'very_short'
+    label 'short'
 
     input:
         tuple val(sample), path(bedpe)
@@ -309,7 +311,7 @@ process select_significant_intrachrom_interactions {
         '''
         set -o pipefail
 
-        '!{params.script_dir}/run_nchg.py' \
+        run_nchg.py                        \
             --fdr='!{fdr}'                 \
             --log-ratio='!{log_ratio}'     \
             --resolution='!{resolution}'   \
@@ -324,6 +326,8 @@ process select_significant_intrachrom_interactions {
 }
 
 process select_significant_interchrom_interactions {
+    label 'short'
+
     input:
         tuple val(sample), path(bedpe)
         val log_ratio
@@ -337,7 +341,7 @@ process select_significant_interchrom_interactions {
         '''
         set -o pipefail
 
-        '!{params.script_dir}/run_nchg.py' \
+        run_nchg.py                        \
             --fdr='!{fdr}'                 \
             --log-ratio='!{log_ratio}'     \
             --drop-not-significant         \
@@ -351,6 +355,8 @@ process select_significant_interchrom_interactions {
 }
 
 process map_interchrom_interactions_to_domains {
+    label 'short'
+
     input:
         tuple val(sample), path(interchrom_interactions), path(domains)
 
@@ -386,6 +392,8 @@ process map_interchrom_interactions_to_domains {
 }
 
 process merge_interactions {
+    label 'very_short'
+
     input:
         tuple val(sample), path(cis), path(trans)
 
@@ -395,6 +403,8 @@ process merge_interactions {
     shell:
         outname="${sample}_domains_with_significant_interactions.bedpe.zst"
         '''
+        set -o pipefail
+
         zstdcat *.bedpe.zst                  |
         awk '$1!="." && $4!="."'             |
         sort -u -k1,1V -k2,2n -k4,4V -k5,5n  |
@@ -405,7 +415,9 @@ process merge_interactions {
 }
 
 process call_cliques {
-    publishDir params.output_dir, mode: 'copy'
+    publishDir params.outdir, mode: 'copy'
+
+    label 'very_short'
 
     input:
         tuple val(sample), path(domains), path(significant_interactions)
@@ -420,8 +432,8 @@ process call_cliques {
     shell:
         outprefix="${sample}"
         '''
-        '!{params.script_dir}/call_cliques.py' \
-            '!{domains}' \
+        call_cliques.py                   \
+            '!{domains}'                  \
             '!{significant_interactions}' \
             '!{outprefix}'
         '''
