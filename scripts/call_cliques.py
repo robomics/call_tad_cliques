@@ -53,18 +53,18 @@ class Bead3D:
     def __sub__(self, other):
         return abs(self.pos - other.pos)
 
-    def getBED(self, stripCopy=False):
-        return f"{self.getChrom(stripCopy)}\t{self.start}\t{self.end}"
+    def get_BED(self, strip_copy=False):  # noqa
+        return f"{self.get_chrom(strip_copy)}\t{self.start}\t{self.end}"
 
-    def getCoords(self, stripCopy=False):
-        return self.getChrom(stripCopy), self.start, self.end
+    def get_coords(self, strip_copy=False):
+        return self.get_chrom(strip_copy), self.start, self.end
 
-    def getChrom(self, stripCopy=False):
-        if stripCopy:
+    def get_chrom(self, strip_copy=False):
+        if strip_copy:
             return self.chrom.split("_")[0]
         return self.chrom
 
-    def getChromCopy(self):
+    def get_chrom_copy(self):
         if "_" in self.chrom:
             return self.chrom.split("_")[1]
         return "A"
@@ -95,8 +95,13 @@ GTrackRecord = namedtuple("GTrackRecord", ["chrom", "start", "end", "id", "radiu
 
 def build_tad_graph(beads: list, interactions: set, chrom: str) -> networkx.Graph:
     graph = networkx.Graph()
-    [graph.add_node(bead) for bead in beads if bead.chrom == chrom]
-    [graph.add_edge(bead1, bead2) for bead1, bead2 in interactions if bead1.chrom == bead2.chrom == chrom]
+    for bead in beads:
+        if bead.chrom == chrom:
+            graph.add_node(bead)
+
+    for bead1, bead2 in interactions:
+        if bead1.chrom == bead2.chrom == chrom:
+            graph.add_edge(bead1, bead2)
 
     return graph
 
@@ -105,7 +110,7 @@ def compute_clique_stats(cliques) -> pd.DataFrame:
     records = []
     for i, clique in enumerate(cliques):
         clique_str = ";".join((str(x) for x in sorted(clique)))
-        records.append([clique[0].getChrom(True), i, len(clique), f"CLICSTAT # {clique_str}"])
+        records.append([clique[0].get_chrom(True), i, len(clique), f"CLICSTAT # {clique_str}"])
 
     return pd.DataFrame(records, columns=["chrom", "bead1_id", "bead2_id", "comment"]).sort_values(
         by=["chrom", "bead1_id", "bead2_id"]
@@ -114,12 +119,12 @@ def compute_clique_stats(cliques) -> pd.DataFrame:
 
 def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.DataFrame]:
     clique_interactions = set()
-    for i, clique in enumerate(cliques):
+    for clique in cliques:
         if len(clique) < clique_size_thresh:
             continue
         for node1, node2 in itertools.product(clique, repeat=2):
             clique_interactions.add(Interaction3D(node1, node2))
-    records = [list(n1.getCoords()) + list(n2.getCoords()) for n1, n2 in clique_interactions]
+    records = [list(n1.get_coords()) + list(n2.get_coords()) for n1, n2 in clique_interactions]
 
     columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
     return clique_interactions, pd.DataFrame(records, columns=columns).sort_values(
@@ -140,7 +145,7 @@ def map_tad_interactions(interactions: set, clique_interactions: set, chrom: str
 
 def compute_clique_sizes(tad_graph) -> pd.DataFrame:
     cliquenum = networkx.node_clique_number(tad_graph)
-    records = [list(tad.getCoords(True)) + [cliquenum[tad]] for tad in cliquenum]
+    records = [list(tad.get_coords(True)) + [cliquenum[tad]] for tad in cliquenum]
 
     columns = ["chrom", "start", "end", "size"]
     return pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start"])
@@ -186,7 +191,9 @@ def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[
 
         res.setdefault(row.chrom, []).append(bead)
 
-    [beads.sort() for beads in res.values()]
+    for beads in res.values():
+        beads.sort()
+
     interacting_beads = {Interaction3D(id2bead[id1], id2bead[id2]) for id1, id2 in idpairs}
 
     return interacting_beads, beads
@@ -235,9 +242,7 @@ def make_cli() -> argparse.ArgumentParser:
     return cli
 
 
-if __name__ == "__main__":
-    setup_logger()
-
+def main():
     args = vars(make_cli().parse_args())
 
     domains = import_domains(args["domains"])
@@ -258,7 +263,7 @@ if __name__ == "__main__":
                 raise RuntimeError(f"Refusing to overwrite existing file {file}")
 
     for chrom in domains["chrom"].unique():
-        logging.info(f'Processing "{chrom}"...')
+        logging.info("Processing %s...", chrom)
         tad_graph = build_tad_graph(beads, interactions, chrom)
         cliques = tuple(networkx.find_cliques(tad_graph))
 
@@ -271,3 +276,8 @@ if __name__ == "__main__":
         clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bed", index=False, sep="\t", mode="a")
         clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, sep="\t", mode="a")
         tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, sep="\t", mode="a")
+
+
+if __name__ == "__main__":
+    setup_logger()
+    main()

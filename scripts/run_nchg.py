@@ -63,7 +63,7 @@ def make_cli() -> argparse.ArgumentParser:
 def ensure_file_is_plaintext(path: Union[str, pathlib.Path]) -> bool:
     try:
         with open(path, "r", encoding="utf-8") as f:
-            for i, line in enumerate(f):
+            for i, _ in enumerate(f):
                 if i >= 128:
                     break
     except UnicodeDecodeError:
@@ -93,33 +93,33 @@ def run_nchg(bedpe: pathlib.Path, nchg_bin: pathlib.Path, method: str, resolutio
         if not ensure_file_is_plaintext(cmd[-1]):
             raise RuntimeError(f"File {bedpe} is not a valid UTF-8 text file")
 
-        logging.debug(f"Spawning subprocess for {cmd}...")
-        proc = sp.Popen(cmd, stdin=sp.DEVNULL, stdout=sp.PIPE, stderr=None, encoding="utf-8")
+        logging.debug("Spawning subprocess for %s...", cmd)
+        with sp.Popen(cmd, stdin=sp.DEVNULL, stdout=sp.PIPE, stderr=None, encoding="utf-8") as proc:
 
-        columns = [
-            "chrom1",
-            "start1",
-            "end1",
-            "chrom2",
-            "start2",
-            "end2",
-            "pvalue",
-            "observed_count",
-            "expected_count",
-        ]
+            columns = [
+                "chrom1",
+                "start1",
+                "end1",
+                "chrom2",
+                "start2",
+                "end2",
+                "pvalue",
+                "observed_count",
+                "expected_count",
+            ]
 
-        logging.debug(f"Capturing stdout for {cmd}...")
-        # Asyncronously read NCHG output into a dataframe
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")  # Ignore warnings about data loss header and data shape mismatch
-            df = pd.read_table(proc.stdout, names=columns, index_col=False, delim_whitespace=True)
-        logging.debug(f"DONE capturing stdout for {cmd}." f"Successfully parsed {len(df)} records")
+            logging.debug("Capturing stdout for %s...", cmd)
+            # Asyncronously read NCHG output into a dataframe
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")  # Ignore warnings about data loss header and data shape mismatch
+                df = pd.read_table(proc.stdout, names=columns, index_col=False, delim_whitespace=True)
+            logging.debug("DONE capturing stdout for %s.\nSuccessfully parsed %d records", cmd, len(df))
 
-        proc.wait()
-        if proc.returncode != 0:
-            raise RuntimeError(f"NCHG terminated with exit code {proc.returncode}")
+            proc.wait()
+            if proc.returncode != 0:
+                raise RuntimeError(f"NCHG terminated with exit code {proc.returncode}")
 
-    logging.debug(f"Command {cmd} terminated without errors")
+    logging.debug("Command %s terminated without errors", cmd)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -149,9 +149,7 @@ def setup_logger(level=logging.INFO):
     logging.getLogger().setLevel(level)
 
 
-if __name__ == "__main__":
-    setup_logger()
-
+def main():
     args = vars(make_cli().parse_args())
 
     df = run_nchg(args["bedpe"], nchg_bin=args["nchg_bin"], method=args["method"], resolution=args["resolution"])
@@ -164,3 +162,8 @@ if __name__ == "__main__":
     df.columns = [f"#{df.columns[0]}"] + df.columns[1:].tolist()
 
     df.to_csv(sys.stdout, sep="\t", index=False, header=args["write_header"])
+
+
+if __name__ == "__main__":
+    setup_logger()
+    main()

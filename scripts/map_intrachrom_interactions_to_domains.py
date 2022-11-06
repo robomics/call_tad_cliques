@@ -53,7 +53,7 @@ def import_domains(path_to_domains: pathlib.Path, schema: str = "bed3") -> pd.Da
 def map_intrachrom_interactions_to_domains_serial_slow(
     cf: cooler.Cooler, domains: pd.DataFrame
 ) -> pd.DataFrame:  # noqa
-    logging.info(f"Mapping pairwise cis-interactions between {len(domains)} regions...")
+    logging.info("Mapping pairwise cis-interactions between %d regions...", len(domains))
 
     def interval_to_str(interval):  # noqa
         chrom, start, end = interval
@@ -74,17 +74,17 @@ def map_intrachrom_interactions_to_domains_serial_slow(
                 print(f"{chrom}\t{q1.start}\t{q1.end}\t{chrom}\t{q2.start}\t{q2.end}\t{tot}")
                 nnz_regions += 1
 
-    logging.info(f"Mapping produced {nnz_regions}/{num_regions} regions with one or more interactions")
+    logging.info("Mapping produced %d/%d regions with one or more interactions", nnz_regions, num_regions)
 
 
 def map_intrachrom_interactions_to_domains_serial(cf: cooler.Cooler, domains: pd.DataFrame) -> pd.DataFrame:  # noqa
-    logging.info(f"Mapping pairwise cis-interactions between {len(domains)} regions...")
+    logging.info("Mapping pairwise cis-interactions between %d regions...", len(domains))
 
     nnz_regions = 0
     sel = cf.matrix(balance=False, as_pixels=False)
     bin_size = cf.binsize
     for chrom, df in domains.groupby("chrom"):
-        logging.info(f"Processing {chrom}...")
+        logging.info("Processing %s...", chrom)
         pixels = np.triu(sel.fetch(chrom))
         qstarts = df["start"].to_numpy()
         qends = df["end"].to_numpy()
@@ -101,7 +101,7 @@ def map_intrachrom_interactions_to_domains_serial(cf: cooler.Cooler, domains: pd
                     print(f"{chrom}\t{qstarts[i]}\t{qends[i]}\t{chrom}\t{qstarts[j]}\t{qends[j]}\t{tot}")
                     nnz_regions += 1
 
-    logging.info(f"Found {nnz_regions} regions with one or more interactions")
+    logging.info("Found %d regions with one or more interactions", nnz_regions)
 
 
 def setup_logger(level=logging.INFO):
@@ -109,16 +109,16 @@ def setup_logger(level=logging.INFO):
     logging.getLogger().setLevel(level)
 
 
-if __name__ == "__main__":
-    setup_logger()
-
+def main():
     args = vars(make_cli().parse_args())
 
     cooler_file = cooler.Cooler(args["cooler"])
 
-    if (bs := cooler_file.binsize) < 20000:
+    if (bs := cooler_file.binsize) < 20_000:
         logging.warning(
-            f"Mapping interactions using a bin size of {bs} bp, processing of large chromosomes may require a lot of memory."
+            "Mapping interactions using a bin size of %d bp. "
+            "Processing of large chromosomes may require a lot of memory.",
+            bs,
         )
 
     chrom_sizes = import_chrom_sizes(cooler_file)
@@ -130,3 +130,8 @@ if __name__ == "__main__":
         raise RuntimeError("Unable to import any domain from BED file " + str(args["domains"]))
 
     map_intrachrom_interactions_to_domains_serial(cooler_file, domains)
+
+
+if __name__ == "__main__":
+    setup_logger()
+    main()

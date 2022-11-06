@@ -8,10 +8,9 @@ import sys
 
 import pandas as pd
 
-"""
-This script reads assembly gaps in JSON format from stdin and outputs the gaps in BED format to stdout.
-Gaps in JSON format can be downloaded from UCSC, e.g. https://api.genome.ucsc.edu/getData/track?genome=hg38;track=gap;jsonOutputArrays=1;maxItemsOutput=-1
-"""
+# This script reads assembly gaps in JSON format from stdin and outputs the gaps in BED format to stdout.
+# Gaps in JSON format can be downloaded from UCSC.
+# e.g. https://api.genome.ucsc.edu/getData/track?genome=hg38;track=gap;jsonOutputArrays=1;maxItemsOutput=-1
 
 if __name__ == "__main__":
     records = []
