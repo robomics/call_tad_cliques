@@ -26,7 +26,9 @@ def make_cli() -> argparse.ArgumentParser:
     )
 
     cli.add_argument("domains", type=existing_file, help="Path to a BED file with the domain list.")
-    cli.add_argument("bedpe", type=existing_file, help="Path to a BEDPE file with the list of significant trans interactions.")
+    cli.add_argument(
+        "bedpe", type=existing_file, help="Path to a BEDPE file with the list of significant trans interactions."
+    )
 
     return cli
 
@@ -85,8 +87,10 @@ if __name__ == "__main__":
 
     cooler_file = cooler.Cooler(args["cooler"])
 
-    if (bs := cooler_file.binsize) < 20000:
-        logging.warning(f"Mapping interactions using a bin size of {bs} bp, processing of large chromosomes may require a lot of memory.")
+    if (bs := cooler_file.binsize) < 500_000:
+        logging.warning(
+            f"Mapping interactions using a bin size of {bs} bp, processing of large chromosomes may require a lot of memory."
+        )
 
     chrom_sizes = import_chrom_sizes(cooler_file)
     if len(chrom_sizes) == 0:

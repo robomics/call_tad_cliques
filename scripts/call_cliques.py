@@ -250,11 +250,7 @@ if __name__ == "__main__":
 
     interactions, beads = preprocess_data(domains, interactions)
 
-    for suffix in ["_clique_stats.tsv",
-                   "_clique_sizes.tsv",
-                   "_clique_interactions.tsv",
-                   "_tad_interactions.tsv"]:
-
+    for suffix in ["_clique_stats.tsv", "_clique_sizes.tsv", "_clique_interactions.tsv", "_tad_interactions.tsv"]:
         if (file := pathlib.Path(f"{out_prefix}{suffix}")).exists():
             if args["force"]:
                 file.unlink()
@@ -262,7 +258,7 @@ if __name__ == "__main__":
                 raise RuntimeError(f"Refusing to overwrite existing file {file}")
 
     for chrom in domains["chrom"].unique():
-        logging.info(f"Processing \"{chrom}\"...")
+        logging.info(f'Processing "{chrom}"...')
         tad_graph = build_tad_graph(beads, interactions, chrom)
         cliques = tuple(networkx.find_cliques(tad_graph))
 

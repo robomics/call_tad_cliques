@@ -50,7 +50,9 @@ def import_domains(path_to_domains: pathlib.Path, schema: str = "bed3") -> pd.Da
         return bf.read_table(str(path_to_domains), schema=schema)
 
 
-def map_intrachrom_interactions_to_domains_serial_slow(cf: cooler.Cooler, domains: pd.DataFrame) -> pd.DataFrame:  # noqa
+def map_intrachrom_interactions_to_domains_serial_slow(
+    cf: cooler.Cooler, domains: pd.DataFrame
+) -> pd.DataFrame:  # noqa
     logging.info(f"Mapping pairwise cis-interactions between {len(domains)} regions...")
 
     def interval_to_str(interval):  # noqa
@@ -115,7 +117,9 @@ if __name__ == "__main__":
     cooler_file = cooler.Cooler(args["cooler"])
 
     if (bs := cooler_file.binsize) < 20000:
-        logging.warning(f"Mapping interactions using a bin size of {bs} bp, processing of large chromosomes may require a lot of memory.")
+        logging.warning(
+            f"Mapping interactions using a bin size of {bs} bp, processing of large chromosomes may require a lot of memory."
+        )
 
     chrom_sizes = import_chrom_sizes(cooler_file)
     if len(chrom_sizes) == 0:
