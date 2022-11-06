@@ -135,7 +135,7 @@ jobs:
         src="data/$(basename "$TEST_DATASET_URL")"
         dest="$src.new"
         
-        pip3 install 'cooler==0.8.11'
+        pip3 install -r requirements.txt
         
         for res in 100000 1000000; do
           cooler cp "$src::/resolutions/$res" "$dest::/resolutions/$res"
