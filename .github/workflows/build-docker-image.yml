@@ -71,6 +71,7 @@ jobs:
           cache-to: type=gha,mode=min
           tags: ${{ steps.meta.outputs.tags }}
 
+
   test-image:
     runs-on: ubuntu-latest
     needs: build-image
@@ -78,9 +79,19 @@ jobs:
     steps:
       - name: Test binaries
         run: |
-          bedtools --help
-          cooler --help
-          NCHG --help
+          bins=(bedtools
+                cooler
+                NCHG
+                call_cliques.py
+                convert_tads_to_domains.py
+                map_interchrom_interactions_to_domains.py
+                map_intrachrom_interactions_to_domains.py
+                parse_assembly_gaps_json.py
+                run_nchg.py)
+          
+          for bin in "${bins[@]}"; do
+            "$bin" --help
+          done
 
       - name: Test Python libs
         run: |

@@ -30,21 +30,15 @@ FROM mambaorg/micromamba:1.0.0 AS base
 ARG CONTAINER_VERSION
 ARG CONTAINER_TITLE
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
-ARG CONDA_ENV_FILE_CONTENT
-
-# CONDA_ENV_FILE_CONTENT must be passed through --build-arg
-# Example: --build-arg="CONDA_ENV_FILE_CONTENT=$(cat env.yml)"
-RUN if [ -z "$CONDA_ENV_FILE_CONTENT" ]; then echo "Missing CONDA_ENV_FILE_CONTENT --build-arg" && exit 1; fi
 
 COPY --chown=$MAMBA_USER:$MAMBA_USER env.yml /tmp/
 
-RUN echo "$CONDA_ENV_FILE_CONTENT" | tee /tmp/env.yml \
-&& micromamba install -y \
+RUN micromamba install -y \
         -c conda-forge \
         -c bioconda \
         --file /tmp/env.yml \
 && micromamba clean --all -y \
-&& rm  /tmp/env.yml
+&& rm /tmp/env.yml
 
 COPY --from=builder /tmp/NCHG /usr/local/bin/NCHG
 COPY --chown=nobody:nogroup scripts/*.py /usr/local/bin/
