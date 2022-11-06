@@ -1,0 +1,148 @@
+# Copyright (C) 2022 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build Docker image
+
+on:
+  push:
+    branches: [ main, devel ]
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "env.yml"
+      - "main.nf"
+      - "nextflow.config"
+      - "scripts/*.py"
+
+
+  pull_request:
+    paths:
+      - ".github/workflows/ci.yml"
+      - ".dockerignore"
+      - "Dockerfile"
+      - "env.yml"
+      - "main.nf"
+      - "nextflow.config"
+      - "scripts/*.py"
+
+  release:
+    types: [ published ]
+
+# https://stackoverflow.com/a/72408109
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  TEST_DATASET_URL: 'https://4dn-open-data-public.s3.amazonaws.com/fourfront-webprod/wfoutput/b8433b98-16f8-46f7-8e13-7bb8e996ddc1/4DNFIFJH2524.mcool'
+  TEST_DATASET_SHA256: '298bf32bb5d3ae3300809a2d2c28368f5608dce19c1616e0a0886ebcd0f550d8'
+  NXF_ANSI_LOG: false
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=true
+          tags: |
+            type=semver,priority=1000,pattern={{version}}
+            type=sha,priority=900
+            type=ref,priority=800,event=branch
+            type=ref,priority=700,event=pr
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image and push to registries
+        uses: docker/build-push-action@v3
+        with:
+          context: ${{ github.workspace }}
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=min
+          tags: ${{ steps.meta.outputs.tags }}
+
+
+  cache-test-dataset:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.generate-cache-key.outputs.key }}
+
+    steps:
+    - name: Generate cache key
+      id: generate-cache-key
+      run: |
+        key="test-dataset-$TEST_DATASET_URL"
+        echo "key=$key" >> $GITHUB_OUTPUT
+
+    - name: Cache test datasets
+      id: cache-dataset
+      uses: actions/cache@v3
+      with:
+        key: ${{ steps.generate-cache-key.outputs.key }}
+        path: data/
+
+    - name: Download test dataset
+      if: steps.cache-dataset.outputs.cache-hit != 'true'
+      run: |
+        mkdir data
+        cd data
+        curl -LO "$TEST_DATASET_URL"
+
+    - name: Checksum test dataset
+      run: |
+        echo "$TEST_DATASET_SHA256  $(basename "$TEST_DATASET_URL")" > checksum.sha256
+        shasum -c checksum.sha256
+
+  test-workflow:
+    runs-on: ubuntu-latest
+    needs: [ build-image, cache-test-dataset ]
+    container: ghcr.io/${{ github.repository }}:latest
+
+    strategy:
+      matrix:
+        NXF_VER: [ "22.10.1", "latest-everything" ]
+
+    steps:
+      - name: Check repo
+        uses: actions/checkout@v4
+
+      - name: Cache test datasets
+        id: cache-dataset
+        uses: actions/cache@v3
+        with:
+          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
+          path: data/
+
+      - name: Install Nextflow
+        uses: nf-core/setup-nextflow@v1
+        with:
+          version: "${{ matrix.NXF_VER }}"
+
+      - name: Test workflow
+        run: |
+          nextflow run -with-docker            \
+                       -c config/test.config   \
+                       --mcools='data/*.mcool' \
+                       --outdir=data/out       \
+                   .
