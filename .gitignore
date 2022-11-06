@@ -4,8 +4,10 @@
 
 .idea/
 .vscode/
+test/
 venv/
 work/
+
 
 .nextflow*
 
