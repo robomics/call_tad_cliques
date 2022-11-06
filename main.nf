@@ -146,6 +146,9 @@ process hicexplorer_find_tads {
             cooler='!{cooler}'
         fi
 
+        NUMEXPR_MAX_THREADS='!{task.cpus}'
+        export NUMEXPR_MAX_THREADS
+
         hicFindTADs -p '!{task.cpus}'          \
                     --matrix "$cooler"         \
                     --outPrefix '!{outprefix}' \
