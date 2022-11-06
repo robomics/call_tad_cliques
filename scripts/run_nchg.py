@@ -36,7 +36,7 @@ def make_cli() -> argparse.ArgumentParser:
         if (n := float(arg)) >= 0:
             return n
 
-        raise ValueError("Not a positive float")
+        raise ValueError("Not a non-negative float")
 
     def executable_file(name):
         if (path := shutil.which(name)) is not None:

@@ -10,8 +10,8 @@ import pathlib
 import warnings
 import bioframe as bf
 import logging
-import itertools
 import numpy as np
+import cooler
 
 
 def make_cli() -> argparse.ArgumentParser:
@@ -29,6 +29,11 @@ def make_cli() -> argparse.ArgumentParser:
     cli.add_argument("bedpe", type=existing_file, help="Path to a BEDPE file with the list of significant trans interactions.")
 
     return cli
+
+
+def import_chrom_sizes(cf: cooler.Cooler) -> pd.DataFrame:
+    chroms = bf.from_dict(cf.chromsizes)
+    return chroms
 
 
 def import_domains(path_to_domains: pathlib.Path, schema: str = "bed3") -> pd.DataFrame:
