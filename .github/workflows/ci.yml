@@ -92,7 +92,7 @@ jobs:
     - name: Generate cache key
       id: generate-cache-key
       run: |
-        key="test-dataset-$TEST_DATASET_URL"
+        key="test-dataset-$TEST_DATASET_SHA256"
         echo "key=$key" >> $GITHUB_OUTPUT
 
     - name: Cache test datasets
@@ -110,39 +110,45 @@ jobs:
         curl -LO "$TEST_DATASET_URL"
 
     - name: Checksum test dataset
+      if: steps.cache-dataset.outputs.cache-hit != 'true'
       run: |
-        echo "$TEST_DATASET_SHA256  $(basename "$TEST_DATASET_URL")" > checksum.sha256
+        echo "$TEST_DATASET_SHA256  data/$(basename "$TEST_DATASET_URL")" > checksum.sha256
         shasum -c checksum.sha256
 
   test-workflow:
     runs-on: ubuntu-latest
     needs: [ build-image, cache-test-dataset ]
-    container: ghcr.io/${{ github.repository }}:latest
 
     strategy:
       matrix:
-        NXF_VER: [ "22.10.1", "latest-everything" ]
+        NXF_VER: [ "22.10", "latest" ]
 
     steps:
-      - name: Check repo
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # TODO: remove this step once the repo and package are public
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache test datasets
-        id: cache-dataset
         uses: actions/cache@v3
         with:
-          key: ${{ needs.cache-test-datasets.outputs.cache-key }}
+          key: ${{ needs.cache-test-dataset.outputs.cache-key }}
           path: data/
 
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@v1
         with:
-          version: "${{ matrix.NXF_VER }}"
+          version: ${{ matrix.NXF_VER }}
 
       - name: Test workflow
         run: |
-          nextflow run -with-docker            \
-                       -c config/test.config   \
+          nextflow run -c config/test.config   \
                        --mcools='data/*.mcool' \
                        --outdir=data/out       \
-                   .
+                       .
