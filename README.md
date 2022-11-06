@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 # Nextflow workflow to call TAD cliques
 
+[![CI](https://github.com/robomics/call_tad_cliques/actions/workflows/ci.yml/badge.svg)](https://github.com/robomics/call_tad_cliques/actions/workflows/ci.yml)
+
 This repository hosts a Nextflow workflow to call TAD cliques.
 
 The workflow is largely based on [this](https://github.com/Chrom3D/INC-tutorial) tutorial.
@@ -81,6 +83,7 @@ nextflow run --mcools='data/sample_001.mcool' \
              --assembly_gaps=data/gaps.txt.gz \
              --outdir=results \
              https://github.com/robomics/call_tad_cliques \
+             -r v0.0.2 \
              -with-singularity  # Replace this with -with-docker to use Docker instead
 ```
 
@@ -101,6 +104,7 @@ nextflow run --mcools='https://4dn-open-data-public.s3.amazonaws.com/fourfront-w
              --assembly_gaps='https://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/gap.txt.gz' \
              --outdir=results/ \
              https://github.com/robomics/call_tad_cliques \
+             -r v0.0.2 \
              -with-singularity
 ```
 
