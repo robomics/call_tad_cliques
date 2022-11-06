@@ -62,6 +62,12 @@ workflow {
                     failOnMismatch: true,
                     failOnDuplicate: true)
         )
+
+    call_cliques(domains
+              .join(merge_interactions.out.bedpe,
+                    failOnMismatch: true,
+                    failOnDuplicate: true),
+                 params.clique_size_thresh)
 }
 
 process extract_chrom_sizes_from_cooler {
@@ -89,7 +95,6 @@ process extract_chrom_sizes_from_cooler {
 }
 
 process generate_bed_mask {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -157,7 +162,6 @@ process hicexplorer_find_tads {
 }
 
 process tads_to_domains {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -182,7 +186,6 @@ process tads_to_domains {
 }
 
 process map_intrachrom_interactions {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -212,7 +215,6 @@ process map_intrachrom_interactions {
 }
 
 process bedtools_bedpe_setdiff {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -237,7 +239,6 @@ process bedtools_bedpe_setdiff {
 }
 
 process bedtools_bed_setdiff {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -262,8 +263,6 @@ process bedtools_bed_setdiff {
 }
 
 process collect_interchrom_interactions {
-    publishDir params.output_dir, mode: 'copy'
-
     input:
         tuple val(sample), path(cooler), val(resolution)
         path mask
@@ -294,7 +293,6 @@ process collect_interchrom_interactions {
 }
 
 process select_significant_intrachrom_interactions {
-    publishDir params.output_dir, mode: 'copy'
     label 'very_short'
 
     input:
@@ -326,8 +324,6 @@ process select_significant_intrachrom_interactions {
 }
 
 process select_significant_interchrom_interactions {
-    publishDir params.output_dir, mode: 'copy'
-
     input:
         tuple val(sample), path(bedpe)
         val log_ratio
@@ -355,8 +351,6 @@ process select_significant_interchrom_interactions {
 }
 
 process map_interchrom_interactions_to_domains {
-    publishDir params.output_dir, mode: 'copy'
-
     input:
         tuple val(sample), path(interchrom_interactions), path(domains)
 
@@ -392,8 +386,6 @@ process map_interchrom_interactions_to_domains {
 }
 
 process merge_interactions {
-    publishDir params.output_dir, mode: 'copy'
-
     input:
         tuple val(sample), path(cis), path(trans)
 
@@ -409,5 +401,28 @@ process merge_interactions {
         zstd -T!{task.cpus}                  \
              -!{params.zstd_compression_lvl} \
              -o '!{outname}'
+        '''
+}
+
+process call_cliques {
+    publishDir params.output_dir, mode: 'copy'
+
+    input:
+        tuple val(sample), path(domains), path(significant_interactions)
+        val clique_size
+
+    output:
+        tuple val(sample), path("*_clique_interactions.bedpe"), emit: clique_interactions
+        tuple val(sample), path("*_clique_sizes.bed"), emit: clique_sizes
+        tuple val(sample), path("*_clique_stats.tsv"), emit: clique_stats
+        tuple val(sample), path("*_tad_interactions.tsv"), emit: tad_interactions
+
+    shell:
+        outprefix="${sample}"
+        '''
+        '!{params.script_dir}/call_cliques.py' \
+            '!{domains}' \
+            '!{significant_interactions}' \
+            '!{outprefix}'
         '''
 }
