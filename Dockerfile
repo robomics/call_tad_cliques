@@ -31,19 +31,22 @@ ARG CONTAINER_VERSION
 ARG CONTAINER_TITLE
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
-COPY --from=builder /tmp/NCHG /usr/local/bin/NCHG
 COPY --chown=$MAMBA_USER:$MAMBA_USER env.yml /tmp/
-
-USER root
-RUN chmod 755 /usr/local/bin/NCHG \
-&& chown nobody:nogroup /usr/local/bin/*
-USER mambauser
 
 RUN micromamba install -y \
         -c conda-forge \
         -c bioconda \
         --file /tmp/env.yml \
-&& micromamba clean --all -y
+&& micromamba clean --all -y \
+&& rm /tmp/env.yml
+
+COPY --from=builder /tmp/NCHG /usr/local/bin/NCHG
+COPY --chown=nobody:nogroup scripts/*.py /usr/local/bin/
+
+USER root
+RUN chmod 755 /usr/local/bin/*{NCHG,.py} \
+&& chown nobody:nogroup /usr/local/bin/*
+USER mambauser
 
 WORKDIR /data
 
