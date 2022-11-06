@@ -3,8 +3,9 @@
 # Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
 # SPDX-License-Identifier: MIT
 
-import sys
 import json
+import sys
+
 import pandas as pd
 
 """

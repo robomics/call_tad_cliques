@@ -4,15 +4,15 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-
-import cooler
-import pandas as pd
+import itertools
+import logging
 import pathlib
 import warnings
+
 import bioframe as bf
-import logging
-import itertools
+import cooler
 import numpy as np
+import pandas as pd
 
 
 def make_cli() -> argparse.ArgumentParser:

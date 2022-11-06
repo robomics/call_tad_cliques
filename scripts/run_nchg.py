@@ -4,19 +4,19 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-import sys
-import warnings
-
-import pandas as pd
-import pathlib
 import logging
-import subprocess as sp
-from statsmodels.stats import multitest
+import pathlib
 import shutil
+import subprocess as sp
+import sys
 import tempfile
+import warnings
 from typing import Union
+
 import numpy as np
+import pandas as pd
 from natsort import natsort_keygen
+from statsmodels.stats import multitest
 
 
 def make_cli() -> argparse.ArgumentParser:

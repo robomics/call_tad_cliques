@@ -3,18 +3,18 @@
 # Copyright (C) 2022 Roberto Rossini <roberros@uio.no>
 # SPDX-License-Identifier: MIT
 
+import argparse
 import itertools
+import logging
 import pathlib
 import re
-import argparse
+import warnings
 from collections import namedtuple
 from typing import Tuple
 
+import bioframe as bf
 import networkx
 import pandas as pd
-import bioframe as bf
-import warnings
-import logging
 
 
 class Bead3D:
