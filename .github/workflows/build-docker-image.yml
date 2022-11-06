@@ -11,6 +11,7 @@ on:
       - ".dockerignore"
       - "Dockerfile"
       - "env.yml"
+      - "scripts/*.py"
     tags:
       - 'v*.*.*'
 
@@ -20,6 +21,7 @@ on:
       - ".dockerignore"
       - "Dockerfile"
       - "env.yml"
+      - "scripts/*.py"
 
 # https://stackoverflow.com/a/72408109
 concurrency:
