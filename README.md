@@ -62,7 +62,7 @@ The `--tads` option can be used to pass one or more BED3+ files with the list of
 When this option is not passed, the workflow will call TADs
 using [HiC-Explorer](https://hicexplorer.readthedocs.io/en/latest/content/tools/hicFindTADs.html#hicfindtads).
 
-When provided, BED files should be named like the contact matrix to which they should be paired.
+When provided, BED files should be in the same order as the .cool files, so that the first BED file is mapped to the first .cool etc...
 
 Example:
 
@@ -83,7 +83,7 @@ nextflow run --mcools='data/sample_001.mcool' \
              --assembly_gaps=data/gaps.txt.gz \
              --outdir=results \
              https://github.com/robomics/call_tad_cliques \
-             -r v0.0.2 \
+             -r v0.0.3 \
              -with-singularity  # Replace this with -with-docker to use Docker instead
 ```
 
@@ -104,7 +104,7 @@ nextflow run --mcools='https://4dn-open-data-public.s3.amazonaws.com/fourfront-w
              --assembly_gaps='https://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/gap.txt.gz' \
              --outdir=results/ \
              https://github.com/robomics/call_tad_cliques \
-             -r v0.0.2 \
+             -r v0.0.3 \
              -with-singularity
 ```
 
