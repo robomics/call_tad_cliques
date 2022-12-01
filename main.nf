@@ -12,9 +12,10 @@ workflow {
                            .map { tuple(it.getBaseName(), it, params.trans_bin_size) }
 
     if (params.tads) {
-        // TADs are expected to have the same prefix as the cooler files
+        // TADs are expected to be in the same order as the cooler files
         tads = Channel.fromPath(params.tads)
-                      .map { tuple(it.getBaseName(), it) }
+                      .merge(cis_coolers)
+                      .map { tuple(it[1], it[0]) }
     } else {
         hicexplorer_find_tads(cis_coolers)
         tads = hicexplorer_find_tads.out.bed
