@@ -12,15 +12,19 @@ workflow {
                            .map { tuple(it.getBaseName(), it, params.trans_bin_size) }
 
     if (params.tads) {
-        // TADs are expected to be in the same order as the cooler files
-        tads = Channel.fromPath(params.tads)
-                      .merge(cis_coolers)
-                      .map { tuple(it[1], it[0]) }
+        if (file(params.tads, glob: true) instanceof java.util.LinkedList) {
+            // TADs are expected to be in the same order as the cooler files
+            tads = Channel.fromPath(params.tads)
+	                      .merge(cis_coolers)
+                          .map { tuple(it[1], it[0]) }
+        } else {
+            // A single TAD file was provided: use this annotation for all .cool files
+            tads = cis_coolers.map { tuple(it[0], file(params.tads)) }
+        }
     } else {
         hicexplorer_find_tads(cis_coolers)
         tads = hicexplorer_find_tads.out.bed
     }
-
 
     extract_chrom_sizes_from_cooler(trans_coolers.first())
     generate_bed_mask(file(params.assembly_gaps), file(params.cytoband))

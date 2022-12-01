@@ -64,6 +64,8 @@ using [HiC-Explorer](https://hicexplorer.readthedocs.io/en/latest/content/tools/
 
 When provided, BED files should be in the same order as the .cool files, so that the first BED file is mapped to the first .cool etc...
 
+When a single BED file is provided, the same TAD annotation will be used for all .cool files.
+
 Example:
 
 | Hi-C matrix                        | BED                              |
