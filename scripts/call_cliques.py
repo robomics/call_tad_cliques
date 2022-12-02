@@ -293,7 +293,7 @@ def main():
             f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a"
         )
         tad_interactions_df.to_csv(
-            f"{out_prefix}_tad_interactions.tsv", index=False, header=print_header, sep="\t", mode="a"
+            f"{out_prefix}_tad_interactions.bedpe", index=False, header=print_header, sep="\t", mode="a"
         )
 
         print_header = False
