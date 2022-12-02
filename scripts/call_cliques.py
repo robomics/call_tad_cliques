@@ -262,6 +262,7 @@ def main():
             else:
                 raise RuntimeError(f"Refusing to overwrite existing file {file}")
 
+    print_header = True
     for chrom in domains["chrom"].unique():
         logging.info("Processing %s...", chrom)
         tad_graph = build_tad_graph(beads, interactions, chrom)
@@ -272,10 +273,12 @@ def main():
         tad_interactions_df = map_tad_interactions(interactions, clique_interactions, chrom)
         clique_sizes_df = compute_clique_sizes(tad_graph)
 
-        clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, sep="\t", mode="a")
+        clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, header=print_header, sep="\t", mode="a")
         clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bed", index=False, header=False, sep="\t", mode="a")
         clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a")
-        tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, sep="\t", mode="a")
+        tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, header=print_header, sep="\t", mode="a")
+
+        print_header = False
 
 
 if __name__ == "__main__":
