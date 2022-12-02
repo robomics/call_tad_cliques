@@ -159,8 +159,6 @@ process hicexplorer_find_tads {
                     --outPrefix '!{outprefix}' \
                     --correctForMultipleTesting fdr
 
-        ls -lah
-
         zstd -T!{task.cpus}                  \
              -!{params.zstd_compression_lvl} \
              '!{outprefix}_domains.bed'
