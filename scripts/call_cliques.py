@@ -238,11 +238,20 @@ def make_cli() -> argparse.ArgumentParser:
         description="Map interchromosomal (trans) interactions between a list of domains in BED format"
     )
 
-    cli.add_argument("domains", type=existing_file, help="TODO")
-    cli.add_argument("interactions", type=existing_file, help="TODO")
-    cli.add_argument("output_prefix", type=pathlib.Path, help="TODO")
-    cli.add_argument("--force", action="store_true", default=False, help="TODO")
-    cli.add_argument("--clique-size-threshold", type=nonnegative_int, help="TODO", default=5)
+    cli.add_argument("domains", type=existing_file, help="Path to a BED file with a list of TADs.")
+    cli.add_argument(
+        "interactions",
+        type=existing_file,
+        help="Path to a BEDPE with the set of significant cis and trans interactions.",
+    )
+    cli.add_argument("output_prefix", type=pathlib.Path, help="Path to output prefix (including parent folder(s)).")
+    cli.add_argument("--force", action="store_true", default=False, help="Force overwrite existing files.")
+    cli.add_argument(
+        "--clique-size-threshold",
+        type=nonnegative_int,
+        help="Minimum clique size. Cliques smaller than this threshold will be dropped.",
+        default=5,
+    )
 
     return cli
 

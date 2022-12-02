@@ -35,12 +35,6 @@ def make_cli() -> argparse.ArgumentParser:
         help="Path to a Cooler file (URI syntax supported).",
     )
     cli.add_argument("domains", type=existing_file, help="Path to a BED file with a list of TADs.")
-    cli.add_argument(
-        "--clr-weight-name",
-        type=str,
-        default="",
-        help="Use balancing weight with this name. Provide empty argument to use raw interacions.",
-    )
     return cli
 
 
