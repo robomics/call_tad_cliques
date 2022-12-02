@@ -273,8 +273,8 @@ def main():
         clique_sizes_df = compute_clique_sizes(tad_graph)
 
         clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, sep="\t", mode="a")
-        clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bed", index=False, sep="\t", mode="a")
-        clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, sep="\t", mode="a")
+        clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bed", index=False, header=False, sep="\t", mode="a")
+        clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a")
         tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, sep="\t", mode="a")
 
 
