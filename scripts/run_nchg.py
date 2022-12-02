@@ -48,12 +48,25 @@ def make_cli() -> argparse.ArgumentParser:
 
     cli.add_argument("bedpe", type=file, help="TODO.")
     cli.add_argument("method", choices={"intra", "inter"}, help="TODO.")
-    cli.add_argument("--resolution", type=int, required="intra" in sys.argv, help="TODO: required when method=intra.")
+    cli.add_argument(
+        "--resolution",
+        type=int,
+        required="intra" in sys.argv,
+        help="TODO: required when method=intra.",
+    )
     cli.add_argument("--fdr", type=probability, default=0.01, help="TODO")
     cli.add_argument("--log-ratio", type=nonnegative_float, default=2.0, help="TODO")
-    cli.add_argument("--nchg-bin", type=executable_file, default="NCHG", help="Path to NCHG executable.")
     cli.add_argument(
-        "--drop-not-significant", action="store_true", default=False, help="Only return significant interactions."
+        "--nchg-bin",
+        type=executable_file,
+        default="NCHG",
+        help="Path to NCHG executable.",
+    )
+    cli.add_argument(
+        "--drop-not-significant",
+        action="store_true",
+        default=False,
+        help="Only return significant interactions.",
     )
     cli.add_argument("--write-header", action="store_true", default=False, help="Write BEDPE header.")
 
@@ -113,7 +126,11 @@ def run_nchg(bedpe: pathlib.Path, nchg_bin: pathlib.Path, method: str, resolutio
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")  # Ignore warnings about data loss header and data shape mismatch
                 df = pd.read_table(proc.stdout, names=columns, index_col=False, delim_whitespace=True)
-            logging.debug("DONE capturing stdout for %s.\nSuccessfully parsed %d records", cmd, len(df))
+            logging.debug(
+                "DONE capturing stdout for %s.\nSuccessfully parsed %d records",
+                cmd,
+                len(df),
+            )
 
             proc.wait()
             if proc.returncode != 0:
@@ -152,8 +169,18 @@ def setup_logger(level=logging.INFO):
 def main():
     args = vars(make_cli().parse_args())
 
-    df = run_nchg(args["bedpe"], nchg_bin=args["nchg_bin"], method=args["method"], resolution=args["resolution"])
-    df = correct_pval(df, correction_method="fdr_bh", log_ratio_thresh=args["log_ratio"], fdr_thresh=args["fdr"])
+    df = run_nchg(
+        args["bedpe"],
+        nchg_bin=args["nchg_bin"],
+        method=args["method"],
+        resolution=args["resolution"],
+    )
+    df = correct_pval(
+        df,
+        correction_method="fdr_bh",
+        log_ratio_thresh=args["log_ratio"],
+        fdr_thresh=args["fdr"],
+    )
 
     if args["drop_not_significant"]:
         df = df[df["significant"]].drop(columns=["significant"])

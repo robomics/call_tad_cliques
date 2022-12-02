@@ -9,7 +9,6 @@ import logging
 import pathlib
 import re
 import warnings
-from collections import namedtuple
 from typing import Tuple
 
 import bioframe as bf
@@ -88,9 +87,6 @@ class Interaction3D:
 
     def __eq__(self, other):
         return str(self) == str(other)
-
-
-GTrackRecord = namedtuple("GTrackRecord", ["chrom", "start", "end", "id", "radius"])
 
 
 def build_tad_graph(beads: list, interactions: set, chrom: str) -> networkx.Graph:
@@ -284,8 +280,12 @@ def main():
 
         clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, header=print_header, sep="\t", mode="a")
         clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t", mode="a")
-        clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a")
-        tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, header=print_header, sep="\t", mode="a")
+        clique_interactions_df.to_csv(
+            f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a"
+        )
+        tad_interactions_df.to_csv(
+            f"{out_prefix}_tad_interactions.tsv", index=False, header=print_header, sep="\t", mode="a"
+        )
 
         print_header = False
 

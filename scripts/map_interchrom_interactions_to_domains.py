@@ -27,7 +27,9 @@ def make_cli() -> argparse.ArgumentParser:
 
     cli.add_argument("domains", type=existing_file, help="Path to a BED file with the domain list.")
     cli.add_argument(
-        "bedpe", type=existing_file, help="Path to a BEDPE file with the list of significant trans interactions."
+        "bedpe",
+        type=existing_file,
+        help="Path to a BEDPE file with the list of significant trans interactions.",
     )
 
     return cli

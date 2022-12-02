@@ -29,13 +29,17 @@ def make_cli() -> argparse.ArgumentParser:
         description="Map intrachromosomal (cis) interactions between a list of domains in BED format"
     )
 
-    cli.add_argument("cooler", type=existing_cooler, help="Path to a Cooler file (URI syntax supported).")
+    cli.add_argument(
+        "cooler",
+        type=existing_cooler,
+        help="Path to a Cooler file (URI syntax supported).",
+    )
     cli.add_argument("domains", type=existing_file, help="Path to a BED file with a list of TADs.")
     cli.add_argument(
         "--clr-weight-name",
         type=str,
         default="",
-        help="Use balancing weight with this name. Provide empty argument to use raw interacions",
+        help="Use balancing weight with this name. Provide empty argument to use raw interacions.",
     )
     return cli
 
@@ -74,7 +78,11 @@ def map_intrachrom_interactions_to_domains_serial_slow(
                 print(f"{chrom}\t{q1.start}\t{q1.end}\t{chrom}\t{q2.start}\t{q2.end}\t{tot}")
                 nnz_regions += 1
 
-    logging.info("Mapping produced %d/%d regions with one or more interactions", nnz_regions, num_regions)
+    logging.info(
+        "Mapping produced %d/%d regions with one or more interactions",
+        nnz_regions,
+        num_regions,
+    )
 
 
 def map_intrachrom_interactions_to_domains_serial(cf: cooler.Cooler, domains: pd.DataFrame) -> pd.DataFrame:  # noqa
