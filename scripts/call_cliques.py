@@ -106,9 +106,12 @@ def build_tad_graph(beads: list, interactions: set, chrom: str) -> networkx.Grap
     return graph
 
 
-def compute_clique_stats(cliques) -> pd.DataFrame:
+def compute_clique_stats(cliques, clique_size_thresh: int) -> pd.DataFrame:
     records = []
     for i, clique in enumerate(cliques):
+        if len(clique) < clique_size_thresh:
+            continue
+
         clique_str = ";".join((str(x) for x in sorted(clique)))
         records.append([clique[0].get_chrom(True), i, len(clique), f"CLICSTAT # {clique_str}"])
 
@@ -122,6 +125,7 @@ def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.D
     for clique in cliques:
         if len(clique) < clique_size_thresh:
             continue
+
         for node1, node2 in itertools.product(clique, repeat=2):
             clique_interactions.add(Interaction3D(node1, node2))
     records = [list(n1.get_coords()) + list(n2.get_coords()) for n1, n2 in clique_interactions]
@@ -136,19 +140,24 @@ def map_tad_interactions(interactions: set, clique_interactions: set, chrom: str
     records = []
     for bead1, bead2 in interactions:
         if bead1.chrom == chrom and bead2.chrom == chrom:
+            chrom1, start1, end1 = bead1.get_coords()
+            chrom2, start2, end2 = bead2.get_coords()
             bead_belongs_to_clique = Interaction3D(bead1, bead2) in clique_interactions
-            records.append([bead1.id, bead2.id, bead_belongs_to_clique, "INTERACT"])
 
-    columns = ["bead1_id", "bead2_id", "bead_part_of_clique", "comment"]
-    return pd.DataFrame(records, columns=columns).sort_values(by=["bead1_id", "bead2_id"])
+            records.append([chrom1, start1, end1, chrom2, start2, end2, bead_belongs_to_clique, "INTERACT"])
+
+    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
+    return pd.DataFrame(records, columns=columns).sort_values(by=[c for c in columns if not c.startswith("end")])
 
 
-def compute_clique_sizes(tad_graph) -> pd.DataFrame:
+def compute_clique_sizes(tad_graph, clique_size_thresh: int) -> pd.DataFrame:
     cliquenum = networkx.node_clique_number(tad_graph)
     records = [list(tad.get_coords(True)) + [cliquenum[tad]] for tad in cliquenum]
 
     columns = ["chrom", "start", "end", "size"]
-    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start"])
+    df = pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start"])
+
+    return df[df["size"] >= clique_size_thresh]
 
 
 def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[set, list]:
@@ -268,13 +277,13 @@ def main():
         tad_graph = build_tad_graph(beads, interactions, chrom)
         cliques = tuple(networkx.find_cliques(tad_graph))
 
-        clique_stats_df = compute_clique_stats(cliques)
+        clique_stats_df = compute_clique_stats(cliques, clique_size_thresh)
         clique_interactions, clique_interactions_df = map_clique_interactions(cliques, clique_size_thresh)
         tad_interactions_df = map_tad_interactions(interactions, clique_interactions, chrom)
-        clique_sizes_df = compute_clique_sizes(tad_graph)
+        clique_sizes_df = compute_clique_sizes(tad_graph, clique_size_thresh)
 
         clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, header=print_header, sep="\t", mode="a")
-        clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bed", index=False, header=False, sep="\t", mode="a")
+        clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t", mode="a")
         clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a")
         tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.tsv", index=False, header=print_header, sep="\t", mode="a")
 
