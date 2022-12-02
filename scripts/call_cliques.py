@@ -142,8 +142,8 @@ def map_tad_interactions(interactions: set, clique_interactions: set, chrom: str
 
             records.append([chrom1, start1, end1, chrom2, start2, end2, bead_belongs_to_clique, "INTERACT"])
 
-    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
-    return pd.DataFrame(records, columns=columns).sort_values(by=[c for c in columns if not c.startswith("end")])
+    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2", "bead_part_of_clique", "comment"]
+    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "chrom2", "start2"])
 
 
 def compute_clique_sizes(tad_graph, clique_size_thresh: int) -> pd.DataFrame:
