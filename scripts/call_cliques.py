@@ -269,7 +269,12 @@ def main():
 
     interactions, beads = preprocess_data(domains, interactions)
 
-    for suffix in ["_clique_stats.tsv", "_clique_sizes.bedGraph", "_clique_interactions.bedpe", "_tad_interactions.bedpe"]:
+    for suffix in [
+        "_clique_stats.tsv",
+        "_clique_sizes.bedGraph",
+        "_clique_interactions.bedpe",
+        "_tad_interactions.bedpe",
+    ]:
         if (file := pathlib.Path(f"{out_prefix}{suffix}")).exists():
             if args["force"]:
                 file.unlink()
