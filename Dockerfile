@@ -40,12 +40,10 @@ RUN micromamba install -y \
 && micromamba clean --all -y \
 && rm /tmp/env.yml
 
-COPY --from=builder /tmp/NCHG /usr/local/bin/NCHG
-COPY --chown=nobody:nogroup scripts/*.py /usr/local/bin/
+COPY --from=builder --chown=root:root /tmp/NCHG /usr/local/bin/NCHG
 
 USER root
-RUN chmod 755 /usr/local/bin/*{NCHG,.py} \
-&& chown nobody:nogroup /usr/local/bin/*
+RUN chmod 755 /usr/local/bin/NCHG
 USER mambauser
 
 WORKDIR /data

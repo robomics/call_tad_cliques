@@ -6,8 +6,4 @@
 **
 
 # Allowed files and directories
-!scripts/**
 !env.yml
-
-# Excluded files and directories
-scripts/scratch/**
