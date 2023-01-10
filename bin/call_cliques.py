@@ -5,7 +5,6 @@
 
 import argparse
 import itertools
-import logging
 import pathlib
 import re
 import warnings
@@ -60,12 +59,12 @@ class Bead3D:
 
     def get_chrom(self, strip_copy=False):
         if strip_copy:
-            return self.chrom.split("_")[0]
+            return self.chrom.partition("_")[0]
         return self.chrom
 
     def get_chrom_copy(self):
         if "_" in self.chrom:
-            return self.chrom.split("_")[1]
+            return self.chrom.partition("_")[2]
         return "A"
 
 
@@ -80,7 +79,7 @@ class Interaction3D:
         return str(self)
 
     def __str__(self):
-        return str(self.bead1) + " " + str(self.bead2)
+        return f"{self.bead1} {self.bead2}"
 
     def __hash__(self):
         return hash(str(self))
@@ -89,15 +88,13 @@ class Interaction3D:
         return str(self) == str(other)
 
 
-def build_tad_graph(beads: list, interactions: set, chrom: str) -> networkx.Graph:
+def build_tad_graph(beads: list, interactions: set) -> networkx.Graph:
     graph = networkx.Graph()
     for bead in beads:
-        if bead.chrom == chrom:
-            graph.add_node(bead)
+        graph.add_node(bead)
 
     for bead1, bead2 in interactions:
-        if bead1.chrom == bead2.chrom == chrom:
-            graph.add_edge(bead1, bead2)
+        graph.add_edge(bead1, bead2)
 
     return graph
 
@@ -132,15 +129,14 @@ def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.D
     )
 
 
-def map_tad_interactions(interactions: set, clique_interactions: set, chrom: str) -> pd.DataFrame:
+def map_tad_interactions(interactions: set, clique_interactions: set) -> pd.DataFrame:
     records = []
     for bead1, bead2 in interactions:
-        if bead1.chrom == chrom and bead2.chrom == chrom:
-            chrom1, start1, end1 = bead1.get_coords()
-            chrom2, start2, end2 = bead2.get_coords()
-            bead_belongs_to_clique = Interaction3D(bead1, bead2) in clique_interactions
+        chrom1, start1, end1 = bead1.get_coords()
+        chrom2, start2, end2 = bead2.get_coords()
+        bead_belongs_to_clique = Interaction3D(bead1, bead2) in clique_interactions
 
-            records.append([chrom1, start1, end1, chrom2, start2, end2, bead_belongs_to_clique, "INTERACT"])
+        records.append([chrom1, start1, end1, chrom2, start2, end2, bead_belongs_to_clique, "INTERACT"])
 
     columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2", "bead_part_of_clique", "comment"]
     return pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "chrom2", "start2"])
@@ -162,8 +158,8 @@ def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[
         id1 = f"{interaction.chrom1}:{interaction.start1}-{interaction.end1}"
         id2 = f"{interaction.chrom2}:{interaction.start2}-{interaction.end2}"
 
-        segment_dict.setdefault(id1, list()).append(id2)
-        segment_dict.setdefault(id2, list()).append(id1)
+        segment_dict.setdefault(id1, []).append(id2)
+        segment_dict.setdefault(id2, []).append(id1)
 
     combined_dict = {}
 
@@ -214,11 +210,6 @@ def import_interactions(path_to_bedpe: pathlib.Path, schema: str = "bedpe") -> p
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # Ignore warnings about data loss due to column truncation
         return bf.read_table(str(path_to_bedpe), schema=schema)
-
-
-def setup_logger(level=logging.INFO):
-    logging.basicConfig(format="[%(asctime)s] %(levelname)s: %(message)s")
-    logging.getLogger().setLevel(level)
 
 
 def make_cli() -> argparse.ArgumentParser:
@@ -281,29 +272,19 @@ def main():
             else:
                 raise RuntimeError(f"Refusing to overwrite existing file {file}")
 
-    print_header = True
-    for chrom in domains["chrom"].unique():
-        logging.info("Processing %s...", chrom)
-        tad_graph = build_tad_graph(beads, interactions, chrom)
-        cliques = tuple(networkx.find_cliques(tad_graph))
+    tad_graph = build_tad_graph(beads, interactions)
+    cliques = tuple(networkx.find_cliques(tad_graph))
 
-        clique_stats_df = compute_clique_stats(cliques, clique_size_thresh)
-        clique_interactions, clique_interactions_df = map_clique_interactions(cliques, clique_size_thresh)
-        tad_interactions_df = map_tad_interactions(interactions, clique_interactions, chrom)
-        clique_sizes_df = compute_clique_sizes(tad_graph, clique_size_thresh)
+    clique_stats_df = compute_clique_stats(cliques, clique_size_thresh)
+    clique_interactions, clique_interactions_df = map_clique_interactions(cliques, clique_size_thresh)
+    tad_interactions_df = map_tad_interactions(interactions, clique_interactions)
+    clique_sizes_df = compute_clique_sizes(tad_graph, clique_size_thresh)
 
-        clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, header=print_header, sep="\t", mode="a")
-        clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t", mode="a")
-        clique_interactions_df.to_csv(
-            f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t", mode="a"
-        )
-        tad_interactions_df.to_csv(
-            f"{out_prefix}_tad_interactions.bedpe", index=False, header=print_header, sep="\t", mode="a"
-        )
-
-        print_header = False
+    clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, sep="\t")
+    clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t")
+    clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t")
+    tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.bedpe", index=False, sep="\t")
 
 
 if __name__ == "__main__":
-    setup_logger()
     main()
