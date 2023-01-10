@@ -453,6 +453,7 @@ process call_cliques {
         call_cliques.py                   \
             '!{domains}'                  \
             '!{significant_interactions}' \
-            '!{outprefix}'
+            '!{outprefix}'                \
+            --clique-size-threshold=!{clique_size}
         '''
 }
