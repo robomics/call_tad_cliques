@@ -85,7 +85,7 @@ nextflow run --mcools='data/sample_001.mcool' \
              --assembly_gaps=data/gaps.txt.gz \
              --outdir=results \
              https://github.com/robomics/call_tad_cliques \
-             -r v0.0.6 \
+             -r v0.0.7 \
              -with-singularity  # Replace this with -with-docker to use Docker instead
 ```
 
@@ -106,7 +106,7 @@ nextflow run --mcools='https://4dn-open-data-public.s3.amazonaws.com/fourfront-w
              --assembly_gaps='https://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/gap.txt.gz' \
              --outdir=results/ \
              https://github.com/robomics/call_tad_cliques \
-             -r v0.0.6 \
+             -r v0.0.7 \
              -with-singularity
 ```
 
