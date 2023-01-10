@@ -76,6 +76,7 @@ workflow {
 }
 
 process extract_chrom_sizes_from_cooler {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -100,6 +101,7 @@ process extract_chrom_sizes_from_cooler {
 }
 
 process generate_bed_mask {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -134,6 +136,7 @@ process generate_bed_mask {
 }
 
 process hicexplorer_find_tads {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'process_medium'
 
     input:
@@ -168,6 +171,7 @@ process hicexplorer_find_tads {
 }
 
 process tads_to_domains {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -192,6 +196,7 @@ process tads_to_domains {
 }
 
 process map_intrachrom_interactions {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -221,6 +226,7 @@ process map_intrachrom_interactions {
 }
 
 process bedtools_bedpe_setdiff {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -245,6 +251,7 @@ process bedtools_bedpe_setdiff {
 }
 
 process bedtools_bed_setdiff {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
@@ -269,6 +276,7 @@ process bedtools_bed_setdiff {
 }
 
 process collect_interchrom_interactions {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'long'
 
     input:
@@ -301,6 +309,7 @@ process collect_interchrom_interactions {
 }
 
 process select_significant_intrachrom_interactions {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'short'
 
     input:
@@ -332,6 +341,7 @@ process select_significant_intrachrom_interactions {
 }
 
 process select_significant_interchrom_interactions {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'short'
 
     input:
@@ -361,6 +371,7 @@ process select_significant_interchrom_interactions {
 }
 
 process map_interchrom_interactions_to_domains {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'short'
 
     input:
@@ -398,6 +409,7 @@ process map_interchrom_interactions_to_domains {
 }
 
 process merge_interactions {
+    // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'very_short'
 
     input:
