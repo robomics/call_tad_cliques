@@ -64,8 +64,12 @@ def fill_gaps_between_tads(chrom_sizes: pd.DataFrame, tads: pd.DataFrame) -> pd.
     )
 
 
-if __name__ == "__main__":
+def main():
     args = vars(make_cli().parse_args())
 
     domains = fill_gaps_between_tads(import_chrom_sizes(args["chrom-sizes"]), import_tads(args["tads"]))
     domains.to_csv(sys.stdout, sep="\t", header=False, index=False)
+
+
+if __name__ == "__main__":
+    main()

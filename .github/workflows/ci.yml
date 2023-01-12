@@ -173,6 +173,6 @@ jobs:
       - name: Test workflow
         run: |
           nextflow run -c config/test.config   \
-                       --mcools='data/*.mcool' \
+                       --mcools=data/*.mcool   \
                        --outdir=data/out       \
                        .
