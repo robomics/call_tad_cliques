@@ -49,7 +49,10 @@ workflow {
     }
 
     sample_sheet.splitCsv(sep: "\t", header: true)
-                .map { parse_sample_sheet_row(it) }
+                .map {
+                        it = parse_sample_sheet_row(it)
+                        it[0] + it[3]  // Concatenate path to coolers and tads (when available)
+                    }
                 .set { sample_table }
 
     parse_sample_sheet(sample_sheet, sample_table.collect())
@@ -171,10 +174,7 @@ process parse_sample_sheet {
 
     input:
         path sample_sheet
-        tuple path(coolers),
-              val(cooler_cis_uri),
-              val(cooler_trans_uri),
-              path(tads)
+        path files
 
     output:
         path "*.ok", emit: tsv
