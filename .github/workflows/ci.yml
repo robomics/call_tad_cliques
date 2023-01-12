@@ -172,9 +172,8 @@ jobs:
 
       - name: Test workflow
         run: |
-          ls -lah .
-          ls -lah data/
-          nextflow run --cooler_cis="data/$(basename "$TEST_DATASET_URL")::/resolutions/100000" \
+          nextflow run -c config/test.config \
+                       --cooler_cis="data/$(basename "$TEST_DATASET_URL")::/resolutions/100000" \
                        --cooler_trans="data/$(basename "$TEST_DATASET_URL")::/resolutions/1000000" \
                        --outdir=data/out \
                        .
