@@ -163,7 +163,6 @@ jobs:
         uses: actions/cache@v3
         with:
           key: ${{ needs.preproc-test-dataset.outputs.cache-key }}
-          path: data/
 
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@v1
@@ -172,7 +171,9 @@ jobs:
 
       - name: Test workflow
         run: |
-          nextflow run -c config/test.config   \
-                       --mcools=data/*.mcool   \
-                       --outdir=data/out       \
+          ls -lah .
+          ls -lah data/
+          nextflow run --cooler_cis="data/$(basename "$TEST_DATASET_URL")::/resolutions/100000" \
+                       --cooler_trans="data/$(basename "$TEST_DATASET_URL")::/resolutions/1000000" \
+                       --outdir=data/out \
                        .
