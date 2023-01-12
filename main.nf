@@ -20,7 +20,7 @@ def parse_sample_sheet_row(row) {
     }
 
     // Workaround for optional files: https://github.com/nextflow-io/nextflow/issues/1694
-    tads = row.tads.isEmpty() ? [] : row.tads
+    tads = row.tads.isEmpty() ? [] : [file(row.tads)]
 
     tuple(coolers,
           row.cooler_cis,
@@ -78,7 +78,7 @@ workflow {
             .splitCsv(sep: "\t", header: true)
             .map { row ->
                    tuple(row.id, row.cooler_cis, row.cis_resolution,
-                         row.tads != "" ? row.tads : [])
+                         row.tads != "" ? file(row.tads) : [])
                  }
     )
 
