@@ -11,6 +11,15 @@ from typing import Tuple, Union
 import cooler
 import pandas as pd
 
+def cooler_uri_basename(uri) -> str:
+    uri = str(uri)
+    if "::" in uri:
+        path, _, suffix = uri.partition("::")
+        path = pathlib.Path(path).name
+        return f"{path}::{suffix}"
+
+    return pathlib.Path(uri).name
+
 
 def make_cli() -> argparse.ArgumentParser:
     def existing_file(arg):
@@ -33,7 +42,9 @@ def check_column_is_integral(col: pd.Series, col_name: Union[str, None] = None):
         raise RuntimeError(f'column "{col_name}" contains invalid values (expected int, found {col.dtype})')
 
 
-def check_is_valid_cooler(path: pathlib.Path):
+def check_is_valid_cooler(path: pathlib.Path, strip_parent_dirs: bool = True):
+    if strip_parent_dirs:
+        path = cooler_uri_basename(path)
     try:
         cooler.Cooler(str(path))
     except KeyError:
@@ -45,7 +56,9 @@ def check_is_valid_cooler(path: pathlib.Path):
         raise RuntimeError(f'unable to open file "{path}": {e}')
 
 
-def check_is_valid_bed3(path: pathlib.Path):
+def check_is_valid_bed3(path: pathlib.Path, strip_parent_dirs: bool = True):
+    if strip_parent_dirs:
+        path = cooler_uri_basename(path)
     try:
         df = pd.read_table(path, names=["chrom", "start", "end"], usecols=[0, 1, 2])
         if df.isnull().values.any():
@@ -60,13 +73,15 @@ def check_is_valid_bed3(path: pathlib.Path):
         raise RuntimeError(f'validation failed for file "{path}": {e}')
 
 
-def parse_cooler_uris(cooler_uris) -> Tuple[list, list]:
+def parse_cooler_uris(cooler_uris, strip_parent_dirs: bool = True) -> Tuple[list, list]:
     paths = []
     resolutions = []
 
     for uri in cooler_uris:
+        if strip_parent_dirs:
+            uri = cooler_uri_basename(uri)
         c = cooler.Cooler(str(uri))
-        paths.append(c.filename)
+        paths.append(pathlib.Path(c.filename).absolute())
         resolutions.append(c.binsize)
 
     return paths, resolutions
@@ -104,10 +119,6 @@ if __name__ == "__main__":
     EXPECTED_COLUMNS = tuple(["cooler_cis", "cooler_trans", "tads"])
     sample_sheet = make_cli().parse_args().tsv
 
-    try:
-        main()
-    except RuntimeError as e:
-        print(f'Validation of samplesheet "{sample_sheet}" failed: {e}', file=sys.stderr)
-        sys.exit(1)
+    main()
 
     print(f'Validation of samplesheet "{sample_sheet}" was successful!', file=sys.stderr)
