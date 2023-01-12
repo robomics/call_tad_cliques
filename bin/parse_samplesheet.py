@@ -82,7 +82,10 @@ def parse_cooler_uris(cooler_uris, strip_parent_dirs: bool = True) -> Tuple[list
             uri = cooler_uri_basename(uri)
         c = cooler.Cooler(str(uri))
         paths.append(pathlib.Path(c.filename).absolute())
-        resolutions.append(c.binsize)
+        if "::" in uri:
+            resolutions.append(c.binsize)
+        else:
+            resolutions.append(0)
 
     return paths, resolutions
 
