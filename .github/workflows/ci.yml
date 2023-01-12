@@ -163,6 +163,7 @@ jobs:
         uses: actions/cache@v3
         with:
           key: ${{ needs.preproc-test-dataset.outputs.cache-key }}
+          path: data/
 
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@v1
