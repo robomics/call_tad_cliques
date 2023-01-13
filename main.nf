@@ -37,7 +37,7 @@ def parse_sample_sheet_row(row) {
 }
 
 def row_to_tuple(row) {
-    tuple(row.id,
+    tuple(row.sample,
           row.cooler_cis,
           row.cooler_trans,
           row.tads,
@@ -69,12 +69,12 @@ workflow {
 
     process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
-           .map { row -> tuple(row.id, row.cooler_cis, row.cis_resolution) }
+           .map { row -> tuple(row.sample, row.cooler_cis, row.cis_resolution) }
            .set { cis_coolers }
 
     process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
-           .map { row -> tuple(row.id, row.cooler_trans, row.trans_resolution) }
+           .map { row -> tuple(row.sample, row.cooler_trans, row.trans_resolution) }
            .set { trans_coolers }
 
     extract_chrom_sizes_from_cooler(cis_coolers.first())
@@ -88,7 +88,7 @@ workflow {
         process_sample_sheet.out.tsv
             .splitCsv(sep: "\t", header: true)
             .map { row ->
-                   tuple(row.id, row.cooler_cis, row.cis_resolution,
+                   tuple(row.sample, row.cooler_cis, row.cis_resolution,
                          make_optional_input(row.tads))
                  }
     )
@@ -174,6 +174,14 @@ process generate_sample_sheet {
 
     shell:
         '''
+        for param in '!{sample}' '!{cooler_cis}' '!{cooler_trans}'; do
+            if [[ "$param" == 'null' ]]; then
+                2>&1 echo 'Parameters sample, cooler_cis and cooler_trans are required when no samplesheet is provided!'
+                2>&1 echo "sample='!{sample}'; cooler_cis='!{cooler_cis}'; cooler_trans='!{cooler_trans}'"
+                exit 1
+            fi
+        done
+
         printf 'sample\\tcooler_cis\\tcooler_trans\\ttads\\n' > sample_sheet.tsv
         printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \
                                       '!{cooler_cis}' '!{cooler_trans}' \
