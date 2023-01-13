@@ -11,6 +11,7 @@ from typing import Tuple, Union
 import cooler
 import pandas as pd
 
+
 def cooler_uri_basename(uri) -> str:
     uri = str(uri)
     if "::" in uri:
@@ -31,8 +32,26 @@ def make_cli() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser()
 
     cli.add_argument("tsv", type=existing_file, help="Path to a sample sheet.")
+    cli.add_argument("--detached", action="store_true", default=False, help="Only validate the sample sheet's syntax (i.e. skip steps that require accessing files listed in the sample sheet)")
 
     return cli
+
+
+def check_sample_ids(df: pd.DataFrame):
+    # Look for empty/missing sample IDs
+    invalid_ids_mask = (df["sample"].str.strip().str.len() == 0) | (df["sample"].isnull())
+    if invalid_ids_mask.sum() != 0:
+        affected_rows = "\n- ".join((str(i + 1) for i, invalid in enumerate(invalid_ids_mask) if invalid))
+        raise RuntimeError(f"Found {invalid_ids_mask.sum()} missing sample ID(s).\nAffected row(s):\n- {affected_rows}")
+
+    # Look for duplicate sample IDs
+    df1 = df.groupby("sample").count()
+    duplicates = df1.loc[df1[EXPECTED_COLUMNS[1]] != 1, EXPECTED_COLUMNS[1]]
+    if len(duplicates) != 0:
+        affected_samples = "\n- ".join(
+            (f"{sample}: {num_duplicates} entries" for sample, num_duplicates in duplicates.iteritems())
+        )
+        raise RuntimeError(f"Found {len(duplicates)} rows with duplicate sample IDs:\n - {affected_samples}")
 
 
 def check_column_is_integral(col: pd.Series, col_name: Union[str, None] = None):
@@ -92,35 +111,39 @@ def parse_cooler_uris(cooler_uris, strip_parent_dirs: bool = True) -> Tuple[list
 
 def main():
     df = pd.read_table(sample_sheet)
-    df.index.name = "id"
 
     if tuple(df.columns) != EXPECTED_COLUMNS:
         expected = "\n- ".join(EXPECTED_COLUMNS)
         found = "\n- ".join(df.columns)
         raise RuntimeError(f"\nexpected columns:\n- {expected}\nfound:\n- {found}")
 
-    df["cooler_cis"].apply(check_is_valid_cooler)
-    df["cooler_trans"].apply(check_is_valid_cooler)
+    check_sample_ids(df)
 
-    for path in df["tads"].fillna(""):
-        if path != "":
-            check_is_valid_bed3(path)
+    if not detached:
+        df["cooler_cis"].apply(check_is_valid_cooler)
+        df["cooler_trans"].apply(check_is_valid_cooler)
 
-    paths, res = parse_cooler_uris(df["cooler_cis"])
+        for path in df["tads"].fillna(""):
+            if path != "":
+                check_is_valid_bed3(path)
 
-    df["cooler_cis"] = paths
-    df["cis_resolution"] = res
+        paths, res = parse_cooler_uris(df["cooler_cis"])
 
-    paths, res = parse_cooler_uris(df["cooler_trans"])
-    df["cooler_trans"] = paths
-    df["trans_resolution"] = res
+        df["cooler_cis"] = paths
+        df["cis_resolution"] = res
 
-    df.to_csv(sys.stdout, sep="\t", index=True, header=True)
+        paths, res = parse_cooler_uris(df["cooler_trans"])
+        df["cooler_trans"] = paths
+        df["trans_resolution"] = res
+
+    df.to_csv(sys.stdout, sep="\t", index=False, header=True)
 
 
 if __name__ == "__main__":
-    EXPECTED_COLUMNS = tuple(["cooler_cis", "cooler_trans", "tads"])
-    sample_sheet = make_cli().parse_args().tsv
+    EXPECTED_COLUMNS = tuple(["sample", "cooler_cis", "cooler_trans", "tads"])
+    args = vars(make_cli().parse_args())
+    sample_sheet = args["tsv"]
+    detached = args["detached"]
 
     main()
 
