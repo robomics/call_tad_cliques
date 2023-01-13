@@ -29,7 +29,8 @@ def parse_sample_sheet_row(row) {
 
     tads = make_optional_input(row.tads)
 
-    tuple(coolers,
+    tuple(row.sample,
+          coolers,
           row.cooler_cis,
           row.cooler_trans,
           tads)
@@ -47,29 +48,31 @@ def row_to_tuple(row) {
 
 workflow {
     if (params.sample_sheet) {
-        sample_sheet = Channel.fromPath(params.sample_sheet, checkIfExists: true)
+        check_sample_sheet(file(params.sample_sheet, checkIfExists: true))
     } else {
-        generate_sample_sheet(params.cooler_cis,
+        generate_sample_sheet(params.sample,
+                              params.cooler_cis,
                               params.cooler_trans,
                               params.tads ? params.tads : "")
-        sample_sheet = generate_sample_sheet.out.tsv
+        check_sample_sheet(generate_sample_sheet.out.tsv)
     }
+    sample_sheet = check_sample_sheet.out.tsv
 
     sample_sheet.splitCsv(sep: "\t", header: true)
                 .map {
                         it = parse_sample_sheet_row(it)
-                        it[0] + it[3]  // Concatenate path to coolers and tads (when available)
+                        it[1] + it[4]  // Concatenate path to coolers and tads (when available)
                     }
-                .set { sample_table }
+                .set { files_from_sample_sheet }
 
-    parse_sample_sheet(sample_sheet, sample_table.collect())
+    process_sample_sheet(sample_sheet, files_from_sample_sheet.collect())
 
-    parse_sample_sheet.out.tsv
+    process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
            .map { row -> tuple(row.id, row.cooler_cis, row.cis_resolution) }
            .set { cis_coolers }
 
-    parse_sample_sheet.out.tsv
+    process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
            .map { row -> tuple(row.id, row.cooler_trans, row.trans_resolution) }
            .set { trans_coolers }
@@ -82,7 +85,7 @@ workflow {
     mask = generate_bed_mask.out.bed
 
     process_tads(
-        parse_sample_sheet.out.tsv
+        process_sample_sheet.out.tsv
             .splitCsv(sep: "\t", header: true)
             .map { row ->
                    tuple(row.id, row.cooler_cis, row.cis_resolution,
@@ -97,7 +100,7 @@ workflow {
     bedtools_bed_setdiff(fill_gaps_between_tads.out.bed,
                          mask)
 
-    parse_sample_sheet.out.tsv
+    process_sample_sheet.out.tsv
             .splitCsv(sep: "\t", header: true)
             .map { row_to_tuple(it) }
             .join(bedtools_bed_setdiff.out.bed)
@@ -161,6 +164,7 @@ process generate_sample_sheet {
     cpus 1
 
     input:
+        val sample
         val cooler_cis
         val cooler_trans
         val tads
@@ -170,12 +174,31 @@ process generate_sample_sheet {
 
     shell:
         '''
-        printf 'cooler_cis\\tcooler_trans\\ttads\\n' > sample_sheet.tsv
-        printf '%s\\t%s\\t%s\\n' '!{cooler_cis}' '!{cooler_trans}' '!{tads}' >> sample_sheet.tsv
+        printf 'sample\\tcooler_cis\\tcooler_trans\\ttads\\n' > sample_sheet.tsv
+        printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \
+                                      '!{cooler_cis}' '!{cooler_trans}' \
+                                      '!{tads}' >> sample_sheet.tsv
         '''
 }
 
-process parse_sample_sheet {
+process check_sample_sheet {
+    label 'very_short'
+
+    cpus 1
+
+    input:
+        path sample_sheet
+
+    output:
+        path "${sample_sheet}", includeInputs: true, emit: tsv
+
+    shell:
+        '''
+        parse_samplesheet.py --detached '!{sample_sheet}' > /dev/null
+        '''
+}
+
+process process_sample_sheet {
     label 'very_short'
 
     cpus 1
