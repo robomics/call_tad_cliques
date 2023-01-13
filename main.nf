@@ -9,6 +9,14 @@ def strip_resolution_from_cooler_uri(uri) {
     file(uri.replaceFirst(/::\/resolutions\/\d+$/, ""), checkIfExists: true)
 }
 
+// Workaround for optional input files: https://github.com/nextflow-io/nextflow/issues/1694
+def make_optional_input(path) {
+    if (path?.trim()) {
+        return [file(path)]
+    }
+    return []
+}
+
 def parse_sample_sheet_row(row) {
     cooler_cis_fname = strip_resolution_from_cooler_uri(row.cooler_cis)
     cooler_trans_fname = strip_resolution_from_cooler_uri(row.cooler_trans)
@@ -19,8 +27,7 @@ def parse_sample_sheet_row(row) {
         coolers = [cooler_cis_fname, cooler_trans_fname]
     }
 
-    // Workaround for optional files: https://github.com/nextflow-io/nextflow/issues/1694
-    tads = row.tads.isEmpty() ? [] : [file(row.tads)]
+    tads = make_optional_input(row.tads)
 
     tuple(coolers,
           row.cooler_cis,
@@ -68,7 +75,8 @@ workflow {
            .set { trans_coolers }
 
     extract_chrom_sizes_from_cooler(cis_coolers.first())
-    generate_bed_mask(file(params.assembly_gaps), file(params.cytoband))
+    generate_bed_mask(make_optional_input(params.assembly_gaps),
+                      make_optional_input(params.cytoband))
 
     chrom_sizes = extract_chrom_sizes_from_cooler.out.chrom_sizes
     mask = generate_bed_mask.out.bed
@@ -78,7 +86,7 @@ workflow {
             .splitCsv(sep: "\t", header: true)
             .map { row ->
                    tuple(row.id, row.cooler_cis, row.cis_resolution,
-                         row.tads != "" ? file(row.tads) : [])
+                         make_optional_input(row.tads))
                  }
     )
 
@@ -231,15 +239,30 @@ process generate_bed_mask {
         '''
         set -o pipefail
 
+        # Implement logic to support optional gaps/cytoband input files
+        touch empty.tmp
+
+        if [[ '!{gaps}' == "" ]]; then
+            ln -s empty.tmp gaps
+        else
+            ln -s '!{gaps}' gaps
+        fi
+
+        if [[ '!{cytoband}' == "" ]]; then
+            ln -s empty.tmp cytoband
+        else
+            ln -s '!{cytoband}' cytoband
+        fi
+
         # Concatenate and sort intervals from gaps and cytoband files,
         # then merge overlapping intervals
 
         mkfifo gaps.bed.tmp cytoband.bed.tmp
-        trap 'rm -f mkfifo gaps.bed.tmp cytoband.bed.tmp' EXIT
+        trap 'rm -f mkfifo gaps.bed.tmp cytoband.bed.tmp empty.tmp' EXIT
 
         # Decompress BED files and select BED3 columns
-        zcat '!{gaps}' | cut -f 2-4 >> gaps.bed.tmp &
-        zcat '!{cytoband}' | cut -f 1-3 | grep 'acen$' >> cytoband.bed.tmp &
+        zcat -f gaps | cut -f 2-4 >> gaps.bed.tmp &
+        zcat -f cytoband | cut -f 1-3 | grep 'acen$' >> cytoband.bed.tmp &
 
         # Concatenate, sort and merge intervals
         cat *.bed.tmp |
