@@ -99,20 +99,6 @@ def build_tad_graph(beads: list, interactions: set) -> networkx.Graph:
     return graph
 
 
-def compute_clique_stats(cliques, clique_size_thresh: int) -> pd.DataFrame:
-    records = []
-    for i, clique in enumerate(cliques):
-        if len(clique) < clique_size_thresh:
-            continue
-
-        clique_str = ";".join((str(x) for x in sorted(clique)))
-        records.append([clique[0].get_chrom(True), i, len(clique), f"CLICSTAT # {clique_str}"])
-
-    return pd.DataFrame(records, columns=["chrom", "bead1_id", "bead2_id", "comment"]).sort_values(
-        by=["chrom", "bead1_id", "bead2_id"]
-    )
-
-
 def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.DataFrame]:
     clique_interactions = set()
     for clique in cliques:
@@ -127,19 +113,6 @@ def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.D
     return clique_interactions, pd.DataFrame(records, columns=columns).sort_values(
         by=["chrom1", "start1", "chrom2", "start2"]
     )
-
-
-def map_tad_interactions(interactions: set, clique_interactions: set) -> pd.DataFrame:
-    records = []
-    for bead1, bead2 in interactions:
-        chrom1, start1, end1 = bead1.get_coords()
-        chrom2, start2, end2 = bead2.get_coords()
-        bead_belongs_to_clique = Interaction3D(bead1, bead2) in clique_interactions
-
-        records.append([chrom1, start1, end1, chrom2, start2, end2, bead_belongs_to_clique, "INTERACT"])
-
-    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2", "bead_part_of_clique", "comment"]
-    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "chrom2", "start2"])
 
 
 def compute_clique_sizes(tad_graph, clique_size_thresh: int) -> pd.DataFrame:
@@ -275,15 +248,11 @@ def main():
     tad_graph = build_tad_graph(beads, interactions)
     cliques = tuple(networkx.find_cliques(tad_graph))
 
-    clique_stats_df = compute_clique_stats(cliques, clique_size_thresh)
     clique_interactions, clique_interactions_df = map_clique_interactions(cliques, clique_size_thresh)
-    tad_interactions_df = map_tad_interactions(interactions, clique_interactions)
     clique_sizes_df = compute_clique_sizes(tad_graph, clique_size_thresh)
 
-    clique_stats_df.to_csv(f"{out_prefix}_clique_stats.tsv", index=False, sep="\t")
     clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t")
     clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t")
-    tad_interactions_df.to_csv(f"{out_prefix}_tad_interactions.bedpe", index=False, sep="\t")
 
 
 if __name__ == "__main__":

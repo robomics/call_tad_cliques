@@ -667,8 +667,6 @@ process call_cliques {
     output:
         tuple val(id), path("*_clique_interactions.bedpe"), emit: clique_interactions
         tuple val(id), path("*_clique_sizes.bedGraph"), emit: clique_sizes
-        tuple val(id), path("*_clique_stats.tsv"), emit: clique_stats
-        tuple val(id), path("*_tad_interactions.bedpe"), emit: tad_interactions
 
     shell:
         outprefix="${id}"
