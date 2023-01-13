@@ -32,7 +32,12 @@ def make_cli() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser()
 
     cli.add_argument("tsv", type=existing_file, help="Path to a sample sheet.")
-    cli.add_argument("--detached", action="store_true", default=False, help="Only validate the sample sheet's syntax (i.e. skip steps that require accessing files listed in the sample sheet)")
+    cli.add_argument(
+        "--detached",
+        action="store_true",
+        default=False,
+        help="Only validate the sample sheet's syntax (i.e. skip steps that require accessing files listed in the sample sheet)",
+    )
 
     return cli
 
