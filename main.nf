@@ -48,8 +48,15 @@ def row_to_tuple(row) {
 
 workflow {
     if (params.sample_sheet) {
+        if(params.sample) log.warn("'sample' parameter is ignored when 'sample_sheet' is defined")
+        if(params.cooler_cis) log.warn("'cooler_cis' parameter is ignored when 'sample_sheet' is defined")
+        if(params.cooler_trans) log.warn("'cooler_trans' parameter is ignored when 'sample_sheet' is defined")
         check_sample_sheet(file(params.sample_sheet, checkIfExists: true))
     } else {
+        if(!params.sample || !params.cooler_cis || !params.cooler_trans) {
+            log.error("The following parameters are required when 'sample_sheet' is undefined! Required parameters: sample, cooler_cis, cooler_trans")
+        }
+
         generate_sample_sheet(params.sample,
                               params.cooler_cis,
                               params.cooler_trans,
