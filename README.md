@@ -8,7 +8,7 @@ SPDX-License-Identifier: MIT
 
 [![CI](https://github.com/robomics/call_tad_cliques/actions/workflows/ci.yml/badge.svg)](https://github.com/robomics/call_tad_cliques/actions/workflows/ci.yml)
 
-This repository hosts a Nextflow workflow to call TAD cliques.
+This repository hosts a Nextflow workflow to call [TAD cliques](https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-021-07815-8).
 
 The workflow is largely based on [this](https://github.com/Chrom3D/INC-tutorial) tutorial.
 
@@ -16,7 +16,7 @@ The workflow is largely based on [this](https://github.com/Chrom3D/INC-tutorial)
 
 ### Software requirements
 
-- Nextflow (tested with v22.10.1, DSL2 support required)
+- Nextflow (at least version: v20.07.1. Pipeline was developed using v22.10.1)
 - Docker or Singularity/Apptainer
 
 Running the pipeline without containers is technically possible, but it is not recommended.
@@ -40,87 +40,181 @@ Check out the `Dockerfile` from this repo for an example of how this can be done
 
 ### Required input files
 
-The workflow requires the following input files:
+The workflow can be run in two ways:
+1. Using a sample sheet (recommended, supports processing multiple samples at once)
+2. By specifying options directly on the CLI or using a config
 
-- `--mcools` - one or more Hi-C matrices in .mcool format
-- `--outdir` - directory where to store output files
-- `--cytoband` - CytoBand file. Required to mask centromeric regions
-- `--assembly_gaps` - Assembly gaps in BED3+ format
+#### Using a samplesheet
 
-The complete list of supported parameters can be found in the `nextflow.config` file.
+The samplesheet should be a TSV file with the following columns:
 
-#### Additional requirements
+| sample       | cooler_cis                                | cooler_trans                                | tads                     |
+|--------------|-------------------------------------------|---------------------------------------------|--------------------------|
+| sample_name  | high_resolution.cool                      | low_resolution.cool                         | tads.bed                 |
+| 4DNFI74YHN5W | 4DNFI74YHN5W.mcool::/resolutions/50000    | 4DNFI74YHN5W.mcool::/resolutions/1000000    | 4DNFI74YHN5W_domains.bed |
 
-- All .mcool files should use the same reference genome
-- All .mcool files should have matrices for (at least) the resolutions specified by the `--cis_bin_size` and `--trans_bin_size` options (50kbp and 1Mbp by default)
+- __sample__: Sample names/ids. This field will be used as prefix to in the output file names (see [below](#running-the-workflow)).
+- __cooler_cis__: path to a cooler file with the contact matrix used to read intra-chromosomal/cis interactions (usually a matrix with resolution ~50kbp).
+- __cooler_trans__: path to a cooler file with the contact matrix used to read intra-chromosomal/trans interactions (usually a matrix with resolution ~1Mbp).
+- __tads__ (optional) : path to a BED3+ file with the list of TADs. When not specified, the workflow will use [hicFindTADs](https://hicexplorer.readthedocs.io/en/latest/content/tools/hicFindTADs.html) from the [HiCExplorer](https://github.com/deeptools/HiCExplorer) suite to call TADs.
+
+URI syntax for multi-resolution Cooler files is supported (e.g. `myfile.mcool::/resolutions/bin_size`).
+
+Furthermore, all contact matrices (and TADs when provided) should use the same reference genome assembly.
 
 <details>
-<summary>Notes</summary>
+<summary> <b>Without using a samplesheet</b> </summary>
 
-The `--tads` option can be used to pass one or more BED3+ files with the list of TADs.
+To run the workflow without a samplesheet is not available, the following parameters are required:
 
-When this option is not passed, the workflow will call TADs
-using [HiC-Explorer](https://hicexplorer.readthedocs.io/en/latest/content/tools/hicFindTADs.html#hicfindtads).
+- __sample__
+- __cooler_cis__
+- __cooler_trans__
 
-When provided, BED files should be in the same order as the .cool files, so that the first BED file is mapped to the first .cool etc...
+Parameters have the same meaning as the header fields outlined in the [previous section](#using-a-samplesheet).
 
-When a single BED file is provided, the same TAD annotation will be used for all .cool files.
+The above parameters can be passed directly through the CLI when calling `nextflow run`:
 
-Example:
+```bash
+nextflow run --sample='4DNFI74YHN5W' \
+             --cooler_cis='data/4DNFI74YHN5W.mcool::/resolutions/100000' \
+             --cooler_trans='data/4DNFI74YHN5W.mcool::/resolutions/1000000' \
+             ...
+```
 
-| Hi-C matrix                        | BED                              |
-|------------------------------------|----------------------------------|
-| condition_001.mcool                | condition_001.bed                |
-| mysamplehaveverycomplexnames.mcool | mysamplehaveverycomplexnames.bed |
+Alternatively, parameters can be written to a `config` file:
+```console
+user@dev:/tmp$ cat myconfig.txt
+
+sample       = '4DNFI74YHN5W'
+cooler_cis   = 'data/4DNFI74YHN5W.mcool::/resolutions/100000'
+cooler_trans = 'data/4DNFI74YHN5W.mcool::/resolutions/1000000'
+```
+
+and the `config` file is then passed to `nextflow run`:
+``` bash
+nextflow run -c myconfig.txt ...
+```
 
 </details>
 
+### Optional files and parameters
+
+In addition to the mandatory parameters, providing the following parameters is highly recommended:
+
+- __cytoband__: path to a [cytoband](https://software.broadinstitute.org/software/igv/cytoband) file. Used to mask centromeric regions.
+- __assembly_gaps__: path to a BED file with the list of assembly gaps/unmappable regions.
+
+UCSC publishes the above files for common reference genomes: [link](https://hgdownload.cse.ucsc.edu/goldenPath/) (files are usually named `cytoBand.txt.gz` and `gaps.txt.gz` respectively).
+
+By default, the workflow results are published under `result/`. The output folder can be customized through the __outdir__ parameter.
+
+For a complete list of parameters supported by the workflow refer to the workflow main [config](nextflow.config) file.
+
 ## Running the workflow
 
-Throughout this section we assume input files are stored inside a `data/` folder.
+First, download the example datasets using script `utils/download_example_datasets.sh`.
 
 ```bash
-nextflow run --mcools='data/sample_001.mcool' \
-             --cytoband=data/cytoBand.txt.gz \
-             --assembly_gaps=data/gaps.txt.gz \
-             --outdir=results \
-             https://github.com/robomics/call_tad_cliques \
-             -r v0.0.8 \
-             -with-singularity  # Replace this with -with-docker to use Docker instead
+# This will download files inside folder data/
+utils/download_example_datasets.sh data/
 ```
 
-This will create a `result/` folder with the following files:
+Next, create a `samplesheet.tsv` file like the follwing (make sure you are using tabs, not spaces!)
 
-- `sample_001_clique_interactions.bedpe`
-- `sample_001_clique_sizes.bed`
-- `sample_001_clique_stats.tsv`
-- `sample_001_clique_tad_interactions.tsv`
-
-<!-- TODO: describe output files -->
-
-To test the workflow using publicly available mouse datasets, run the following:
-
-```bash
-nextflow run --mcools='https://4dn-open-data-public.s3.amazonaws.com/fourfront-webprod/wfoutput/8b9d6836-0d6b-4c2f-9eaa-323f4fd7b6e4/4DNFI74YHN5W.mcool' \
-             --cytoband='https://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/cytoBand.txt.gz' \
-             --assembly_gaps='https://hgdownload.cse.ucsc.edu/goldenPath/mm10/database/gap.txt.gz' \
-             --outdir=results/ \
-             https://github.com/robomics/call_tad_cliques \
-             -r v0.0.8 \
-             -with-singularity
+```tsv
+sample   cooler_cis      cooler_trans    tads
+example  data/4DNFI74YHN5W.mcool::/resolutions/50000   data/4DNFI74YHN5W.mcool::/resolutions/1000000
 ```
 
-This should take approximately 5-10 minutes (on slow internet connections it could take significantly longer).
+Finally, run the workflow with:
+```console
+user@dev:/tmp$ nextflow run --sample-sheet=samplesheet.tsv \
+                            --cytoband=data/cytoBand.txt.gz \
+                            --assembly_gaps=data/gaps.txt.gz \
+                            --outdir=data/results/ \
+                            https://github.com/robomics/call_tad_cliques \
+                            -r v0.0.9 \
+                            -with-singularity  # Replace this with -with-docker to use Docker instead
+
+N E X T F L O W  ~  version 22.10.1
+Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: 855a056ebe [main]
+executor >  local (14)
+[1a/d8a231] process > check_sample_sheet                             [100%] 1 of 1 ✔
+[8d/6f96cc] process > process_sample_sheet                           [100%] 1 of 1 ✔
+[0a/bb2a08] process > extract_chrom_sizes_from_cooler                [100%] 1 of 1 ✔
+[c0/8ef7a2] process > generate_bed_mask                              [100%] 1 of 1 ✔
+[46/68ecdb] process > process_tads (1)                               [100%] 1 of 1 ✔
+[a7/538a68] process > fill_gaps_between_tads (1)                     [100%] 1 of 1 ✔
+[b3/b678b9] process > bedtools_bed_setdiff (1)                       [100%] 1 of 1 ✔
+[fc/6de0ad] process > map_intrachrom_interactions (1)                [100%] 1 of 1 ✔
+[09/734100] process > select_significant_intrachrom_interactions (1) [100%] 1 of 1 ✔
+[1e/cd7d31] process > collect_interchrom_interactions (1)            [100%] 1 of 1 ✔
+[f5/c2feb2] process > select_significant_interchrom_interactions (1) [100%] 1 of 1 ✔
+[be/c4afd0] process > map_interchrom_interactions_to_tads (1)        [100%] 1 of 1 ✔
+[89/27c01f] process > merge_interactions (1)                         [100%] 1 of 1 ✔
+[cc/399a12] process > call_cliques (1)                               [100%] 1 of 1 ✔
+Completed at: 13-Jan-2023 20:59:06
+Duration    : 6m 53s
+CPU hours   : 0.1
+Succeeded   : 14
+```
+
+This will create a `data/results/` folder with the following files:
+
+- `example_clique_interactions.bedpe` - BEDPE with the list of interacting TADs part of cliques.
+- `example_clique_sizes.bedGraph` - bedGraph file with the list of TADs with the size of the maximal clique to which they belong.
+
+
+<details>
+<summary> Sample output files </summary>
+
+```console
+user@dev:/tmp$ head data/results/*
+==> data/results/example_clique_interactions.bedpe <==
+chr1	33600000	34500000	chr1	33600000	34500000
+chr1	33600000	34500000	chr1	63100000	64550000
+chr1	33600000	34500000	chr1	73850000	75600000
+chr1	33600000	34500000	chr1	87150000	88300000
+chr1	33600000	34500000	chr1	92950000	94100000
+chr1	33600000	34500000	chr1	131900000	132500000
+chr1	33600000	34500000	chr1	133000000	133650000
+chr1	63100000	64550000	chr1	63100000	64550000
+chr1	63100000	64550000	chr1	73850000	75600000
+chr1	63100000	64550000	chr1	87150000	88300000
+
+==> data/results/example_clique_sizes.bedGraph <==
+chr1	33600000	34500000	5
+chr1	63100000	64550000	5
+chr1	73850000	75600000	5
+chr1	87150000	88300000	5
+chr1	92950000	94100000	5
+chr1	131900000	132500000	5
+chr1	133000000	133650000	5
+chr10	61700000	62850000	5
+chr10	69350000	70300000	5
+chr10	76250000	77500000	5
+```
+
+</details>
 
 <details>
 <summary>Troubleshooting</summary>
 
-
-If you get spurious errors about missing files, try one of the following:
-- Re-run the workflow.
-- Manually download files and pass the local file paths directly to the workflow.
-
 If you get permission errors when using `-with-docker`:
 - Pass option `-process.containerOptions="--user root"` to `nextflow run`
 
+If you get an error similar to:
+```
+Cannot find revision `v0.0.9` -- Make sure that it exists in the remote repository `https://github.com/robomics/call_tad_cliques`
+```
+
+try to remove folder `~/.nextflow/assets/robomics/call_tad_cliques` before running the workflow
+
 </details>
+
+## Getting help
+
+If you are having trouble running the workflow feel free to reach out by starting a new discussion [here](https://github.com/robomics/call_tad_cliques/discussions).
+
+Bug reports and feature requests can be submitted by opening an [issue](https://github.com/robomics/call_tad_cliques/issues).
