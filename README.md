@@ -138,7 +138,7 @@ user@dev:/tmp$ nextflow run --sample-sheet=samplesheet.tsv \
                             -with-singularity  # Replace this with -with-docker to use Docker instead
 
 N E X T F L O W  ~  version 22.10.1
-Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: 855a056ebe [main]
+Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: ebe0c1f350 [v0.0.9]
 executor >  local (14)
 [1a/d8a231] process > check_sample_sheet                             [100%] 1 of 1 ✔
 [8d/6f96cc] process > process_sample_sheet                           [100%] 1 of 1 ✔
