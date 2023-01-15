@@ -70,6 +70,8 @@ workflow {
                         it = parse_sample_sheet_row(it)
                         it[1] + it[4]  // Concatenate path to coolers and tads (when available)
                     }
+                .flatten()
+                .unique()
                 .set { files_from_sample_sheet }
 
     process_sample_sheet(sample_sheet, files_from_sample_sheet.collect())
