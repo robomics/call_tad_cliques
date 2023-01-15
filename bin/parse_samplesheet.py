@@ -6,20 +6,32 @@
 import argparse
 import pathlib
 import sys
+from collections import namedtuple
 from typing import Tuple, Union
 
 import cooler
 import pandas as pd
 
+CoolerURI = namedtuple("CoolerURI", ["parent", "name", "suffix"])
 
-def cooler_uri_basename(uri) -> str:
-    uri = str(uri)
+
+def parse_cooler_uri(uri) -> CoolerURI:
     if "::" in uri:
         path, _, suffix = uri.partition("::")
-        path = pathlib.Path(path).name
-        return f"{path}::{suffix}"
+    else:
+        path = uri
+        suffix = None
 
-    return pathlib.Path(uri).name
+    return CoolerURI(pathlib.Path(path).parent, pathlib.Path(path).name, suffix)
+
+
+def cooler_uri_basename(uri) -> str:
+    _, name, suffix = parse_cooler_uri(uri)
+
+    if suffix is None:
+        return name
+
+    return f"{name}::{suffix}"
 
 
 def make_cli() -> argparse.ArgumentParser:
@@ -97,19 +109,19 @@ def check_is_valid_bed3(path: pathlib.Path, strip_parent_dirs: bool = True):
         raise RuntimeError(f'validation failed for file "{path}": {e}')
 
 
-def parse_cooler_uris(cooler_uris, strip_parent_dirs: bool = True) -> Tuple[list, list]:
+def parse_cooler_uris(cooler_uris) -> Tuple[list, list]:
     paths = []
     resolutions = []
 
     for uri in cooler_uris:
-        if strip_parent_dirs:
-            uri = cooler_uri_basename(uri)
-        c = cooler.Cooler(str(uri))
-        paths.append(pathlib.Path(c.filename).absolute())
         if "::" in uri:
-            resolutions.append(c.binsize)
+            suffix = parse_cooler_uri(uri).suffix
+            resolution = suffix.removeprefix("/resolutions/")
+            resolutions.append(int(resolution))
+            paths.append(str(uri).partition("::")[0])
         else:
             resolutions.append(0)
+            paths.append(uri)
 
     return paths, resolutions
 
