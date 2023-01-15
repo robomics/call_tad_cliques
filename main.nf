@@ -38,8 +38,8 @@ def parse_sample_sheet_row(row) {
 
 def row_to_tuple(row) {
     tuple(row.sample,
-          row.cooler_cis,
-          row.cooler_trans,
+          file(row.cooler_cis, checkIfExists: true),
+          file(row.cooler_trans, checkIfExists: true),
           row.tads,
           row.cis_resolution,
           row.trans_resolution)
@@ -76,12 +76,12 @@ workflow {
 
     process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
-           .map { row -> tuple(row.sample, row.cooler_cis, row.cis_resolution) }
+           .map { row -> tuple(row.sample, file(row.cooler_cis, checkIfExists: true), row.cis_resolution) }
            .set { cis_coolers }
 
     process_sample_sheet.out.tsv
            .splitCsv(sep: "\t", header: true)
-           .map { row -> tuple(row.sample, row.cooler_trans, row.trans_resolution) }
+           .map { row -> tuple(row.sample, file(row.cooler_trans, checkIfExists: true), row.trans_resolution) }
            .set { trans_coolers }
 
     extract_chrom_sizes_from_cooler(cis_coolers.first())
@@ -95,7 +95,7 @@ workflow {
         process_sample_sheet.out.tsv
             .splitCsv(sep: "\t", header: true)
             .map { row ->
-                   tuple(row.sample, row.cooler_cis, row.cis_resolution,
+                   tuple(row.sample, file(row.cooler_cis, checkIfExists: true), row.cis_resolution,
                          make_optional_input(row.tads))
                  }
     )
