@@ -160,7 +160,13 @@ CPU hours   : 0.1
 Succeeded   : 14
 ```
 
-This will create a `data/results/` folder with the following files:
+This will create a `data/results/` folder with three sub-folders:
+
+- `all_interactions/` - Cliques computed from all significant interactions (i.e. both intra and inter-chromosomal interactions).
+- `cis_interactions/` - Cliques computed from significant intra-chromosomal interactions only.
+- `trans_interactions/` - Cliques computed from significant inter-chromosomal interactions only.
+
+Each folder contains the following files:
 
 - `example_clique_interactions.bedpe` - BEDPE with the list of interacting TADs part of cliques.
 - `example_clique_sizes.bedGraph` - bedGraph file with the list of TADs with the size of the maximal clique to which they belong.

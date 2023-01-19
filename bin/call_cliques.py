@@ -138,7 +138,7 @@ def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[
 
     for segment in domains.itertuples(index=False):
         segment_id = f"{segment.chrom}:{segment.start}-{segment.end}"
-        combined_dict[segment_id] = segment_dict[segment_id] if segment_id in segment_dict else "."
+        combined_dict[segment_id] = segment_dict.get(segment_id, ".")
 
     records = []
     pattern = re.compile(r"[:-]")
@@ -179,10 +179,19 @@ def import_domains(path_to_bed: pathlib.Path, schema: str = "bed3") -> pd.DataFr
         return bf.read_table(str(path_to_bed), schema=schema)
 
 
-def import_interactions(path_to_bedpe: pathlib.Path, schema: str = "bedpe") -> pd.DataFrame:
+def import_interactions(path_to_bedpe: pathlib.Path, interaction_type: str, schema: str = "bedpe") -> pd.DataFrame:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # Ignore warnings about data loss due to column truncation
-        return bf.read_table(str(path_to_bedpe), schema=schema)
+        df = bf.read_table(str(path_to_bedpe), schema=schema)
+
+        if interaction_type == "cis-only":
+            return df[df["chrom1"] == df["chrom2"]]
+
+        if interaction_type == "trans-only":
+            return df[df["chrom1"] != df["chrom2"]]
+
+        assert interaction_type == "all"
+        return df
 
 
 def make_cli() -> argparse.ArgumentParser:
@@ -211,6 +220,13 @@ def make_cli() -> argparse.ArgumentParser:
     cli.add_argument("output_prefix", type=pathlib.Path, help="Path to output prefix (including parent folder(s)).")
     cli.add_argument("--force", action="store_true", default=False, help="Force overwrite existing files.")
     cli.add_argument(
+        "--interaction-type",
+        type=str,
+        default="all",
+        choices={"cis-only", "trans-only", "all"},
+        help="Type of interactions to consider when calling cliques.",
+    )
+    cli.add_argument(
         "--clique-size-threshold",
         type=nonnegative_int,
         help="Minimum clique size. Cliques smaller than this threshold will be dropped.",
@@ -224,7 +240,7 @@ def main():
     args = vars(make_cli().parse_args())
 
     domains = import_domains(args["domains"])
-    interactions = import_interactions(args["interactions"])
+    interactions = import_interactions(args["interactions"], args["interaction_type"])
     clique_size_thresh = args["clique_size_threshold"]
     out_prefix = args["output_prefix"]
 
