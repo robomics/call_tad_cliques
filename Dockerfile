@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-FROM mambaorg/micromamba:1.3.0 AS builder
+FROM mambaorg/micromamba:1.3.1 AS builder
 
 ARG MAMBA_DOCKERFILE_ACTIVATE=1
 
@@ -25,7 +25,7 @@ RUN git clone "$NCHG_GIT_URL" /tmp/nchg && cd /tmp/nchg \
 && /tmp/NCHG --help
 
 
-FROM mambaorg/micromamba:1.3.0 AS base
+FROM mambaorg/micromamba:1.3.1 AS base
 
 ARG CONTAINER_VERSION
 ARG CONTAINER_TITLE
