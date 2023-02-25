@@ -179,4 +179,4 @@ jobs:
                        --outdir=data/out \
                        .
           
-          ls -lah data/out/test*
+          ls -lah data/out/{all,cis,trans}_interactions/
