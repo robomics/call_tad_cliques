@@ -7,6 +7,7 @@ import argparse
 import itertools
 import pathlib
 import re
+import sys
 import warnings
 from typing import Tuple
 
@@ -99,30 +100,21 @@ def build_tad_graph(beads: list, interactions: set) -> networkx.Graph:
     return graph
 
 
-def map_clique_interactions(cliques, clique_size_thresh: int) -> Tuple[set, pd.DataFrame]:
-    clique_interactions = set()
+def collect_clique_interactions(cliques, clique_size_thresh: int) -> pd.DataFrame:
+    records = {}
+    clique_id = 0
     for clique in cliques:
         if len(clique) < clique_size_thresh:
             continue
 
         for node1, node2 in itertools.product(clique, repeat=2):
-            clique_interactions.add(Interaction3D(node1, node2))
-    records = [list(n1.get_coords()) + list(n2.get_coords()) for n1, n2 in clique_interactions]
+            records[Interaction3D(node1, node2)] = tuple([f"CLIQUE_#{clique_id}", len(clique)])
 
-    columns = ["chrom1", "start1", "end1", "chrom2", "start2", "end2"]
-    return clique_interactions, pd.DataFrame(records, columns=columns).sort_values(
-        by=["chrom1", "start1", "chrom2", "start2"]
-    )
+        clique_id += 1
 
-
-def compute_clique_sizes(tad_graph, clique_size_thresh: int) -> pd.DataFrame:
-    cliquenum = networkx.node_clique_number(tad_graph)
-    records = [list(tad.get_coords(True)) + [cliquenum[tad]] for tad in cliquenum]
-
-    columns = ["chrom", "start", "end", "size"]
-    df = pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start"])
-
-    return df[df["size"] >= clique_size_thresh]
+    records = (list(n1.get_coords()) + list(n2.get_coords()) + list(val) for ((n1, n2), val) in records.items())
+    columns = bf.SCHEMAS["bedpe"][:8]
+    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "name", "chrom2", "start2"])
 
 
 def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[set, list]:
@@ -207,9 +199,7 @@ def make_cli() -> argparse.ArgumentParser:
 
         raise ValueError("Not a non-negative integer")
 
-    cli = argparse.ArgumentParser(
-        description="Map interchromosomal (trans) interactions between a list of domains in BED format"
-    )
+    cli = argparse.ArgumentParser(description="Call TAD cliques given a list of TADs and significant interactions")
 
     cli.add_argument("domains", type=existing_file, help="Path to a BED file with a list of TADs.")
     cli.add_argument(
@@ -217,8 +207,6 @@ def make_cli() -> argparse.ArgumentParser:
         type=existing_file,
         help="Path to a BEDPE with the set of significant cis and trans interactions.",
     )
-    cli.add_argument("output_prefix", type=pathlib.Path, help="Path to output prefix (including parent folder(s)).")
-    cli.add_argument("--force", action="store_true", default=False, help="Force overwrite existing files.")
     cli.add_argument(
         "--interaction-type",
         type=str,
@@ -242,33 +230,14 @@ def main():
     domains = import_domains(args["domains"])
     interactions = import_interactions(args["interactions"], args["interaction_type"])
     clique_size_thresh = args["clique_size_threshold"]
-    out_prefix = args["output_prefix"]
-
-    if (parent := out_prefix.parent) != "" and parent != ".":
-        parent.mkdir(exist_ok=True)
 
     interactions, beads = preprocess_data(domains, interactions)
-
-    for suffix in [
-        "_clique_stats.tsv",
-        "_clique_sizes.bedGraph",
-        "_clique_interactions.bedpe",
-        "_tad_interactions.bedpe",
-    ]:
-        if (file := pathlib.Path(f"{out_prefix}{suffix}")).exists():
-            if args["force"]:
-                file.unlink()
-            else:
-                raise RuntimeError(f"Refusing to overwrite existing file {file}")
 
     tad_graph = build_tad_graph(beads, interactions)
     cliques = tuple(networkx.find_cliques(tad_graph))
 
-    clique_interactions, clique_interactions_df = map_clique_interactions(cliques, clique_size_thresh)
-    clique_sizes_df = compute_clique_sizes(tad_graph, clique_size_thresh)
-
-    clique_sizes_df.to_csv(f"{out_prefix}_clique_sizes.bedGraph", index=False, header=False, sep="\t")
-    clique_interactions_df.to_csv(f"{out_prefix}_clique_interactions.bedpe", index=False, header=False, sep="\t")
+    clique_interactions = collect_clique_interactions(cliques, clique_size_thresh)
+    clique_interactions.to_csv(sys.stdout, index=False, header=False, sep="\t")
 
 
 if __name__ == "__main__":
