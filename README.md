@@ -129,80 +129,60 @@ example  data/4DNFI74YHN5W.mcool::/resolutions/50000   data/4DNFI74YHN5W.mcool::
 
 Finally, run the workflow with:
 ```console
-user@dev:/tmp$ nextflow run --sample-sheet=samplesheet.tsv \
+user@dev:/tmp$ nextflow run --sample_sheet=samplesheet.tsv \
                             --cytoband=data/cytoBand.txt.gz \
                             --assembly_gaps=data/gaps.txt.gz \
                             --outdir=data/results/ \
                             https://github.com/robomics/call_tad_cliques \
-                            -r v0.1.0 \
+                            -r v1.1.0 \
                             -with-singularity  # Replace this with -with-docker to use Docker instead
 
-N E X T F L O W  ~  version 22.10.1
-Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: e3eb8d8633 [v0.0.10]
-executor >  local (14)
-[1a/d8a231] process > check_sample_sheet                             [100%] 1 of 1 ✔
-[8d/6f96cc] process > process_sample_sheet                           [100%] 1 of 1 ✔
-[0a/bb2a08] process > extract_chrom_sizes_from_cooler                [100%] 1 of 1 ✔
-[c0/8ef7a2] process > generate_bed_mask                              [100%] 1 of 1 ✔
-[46/68ecdb] process > process_tads (1)                               [100%] 1 of 1 ✔
-[a7/538a68] process > fill_gaps_between_tads (1)                     [100%] 1 of 1 ✔
-[b3/b678b9] process > bedtools_bed_setdiff (1)                       [100%] 1 of 1 ✔
-[fc/6de0ad] process > map_intrachrom_interactions (1)                [100%] 1 of 1 ✔
-[09/734100] process > select_significant_intrachrom_interactions (1) [100%] 1 of 1 ✔
-[1e/cd7d31] process > collect_interchrom_interactions (1)            [100%] 1 of 1 ✔
-[f5/c2feb2] process > select_significant_interchrom_interactions (1) [100%] 1 of 1 ✔
-[be/c4afd0] process > map_interchrom_interactions_to_tads (1)        [100%] 1 of 1 ✔
-[89/27c01f] process > merge_interactions (1)                         [100%] 1 of 1 ✔
-[cc/399a12] process > call_cliques (1)                               [100%] 1 of 1 ✔
-Completed at: 13-Jan-2023 20:59:06
-Duration    : 6m 53s
+N E X T F L O W  ~  version 22.10.7
+Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: 9a02af259a [v1.1.0]
+executor >  local (16)
+[71/d00e78] process > check_sample_sheet                             [100%] 1 of 1 ✔
+[ad/a7b3ba] process > process_sample_sheet                           [100%] 1 of 1 ✔
+[03/43e432] process > extract_chrom_sizes_from_cooler                [100%] 1 of 1 ✔
+[81/142f17] process > generate_bed_mask                              [100%] 1 of 1 ✔
+[be/c84dae] process > process_tads (1)                               [100%] 1 of 1 ✔
+[de/142949] process > fill_gaps_between_tads (1)                     [100%] 1 of 1 ✔
+[89/098ccb] process > bedtools_bed_setdiff (1)                       [100%] 1 of 1 ✔
+[cc/368819] process > map_intrachrom_interactions (1)                [100%] 1 of 1 ✔
+[4d/ecb1ac] process > select_significant_intrachrom_interactions (1) [100%] 1 of 1 ✔
+[70/1cfa53] process > collect_interchrom_interactions (1)            [100%] 1 of 1 ✔
+[cb/feb585] process > select_significant_interchrom_interactions (1) [100%] 1 of 1 ✔
+[73/4ca264] process > map_interchrom_interactions_to_tads (1)        [100%] 1 of 1 ✔
+[ad/03bff0] process > merge_interactions (1)                         [100%] 1 of 1 ✔
+[eb/5d93d5] process > call_cliques (3)                               [100%] 3 of 3 ✔
+Completed at: 26-Feb-2023 20:40:59
+Duration    : 7m 30s
 CPU hours   : 0.1
-Succeeded   : 14
+Succeeded   : 16
 ```
 
-This will create a `data/results/` folder with three sub-folders:
+This will create a `data/results/` folder with the following files in BEDPE format:
+- `example_all_clique_interactions.bedpe.gz` - Cliques computed from all significant interactions (i.e. both intra and inter-chromosomal interactions).
+- `example_cis_only_clique_interactions.bedpe.gz` - Cliques computed from significant intra-chromosomal interactions only.
+- `example_trans_only_clique_interactions.bedpe.gz` - Cliques computed from significant inter-chromosomal interactions only.
 
-- `all_interactions/` - Cliques computed from all significant interactions (i.e. both intra and inter-chromosomal interactions).
-- `cis_interactions/` - Cliques computed from significant intra-chromosomal interactions only.
-- `trans_interactions/` - Cliques computed from significant inter-chromosomal interactions only.
-
-Each folder contains the following files:
-
-- `example_clique_interactions.bedpe` - BEDPE with the list of interacting TADs part of cliques.
-- `example_clique_sizes.bedGraph` - bedGraph file with the list of TADs with the size of the maximal clique to which they belong.
+The `name` and `score` fields in the above BEDPE store the clique identifier and maximal clique size respectibely
 
 
-<details>
-<summary> Sample output files </summary>
+### Example output
 
 ```console
-user@dev:/tmp$ head data/results/*
-==> data/results/example_clique_interactions.bedpe <==
-chr1	33600000	34500000	chr1	33600000	34500000
-chr1	33600000	34500000	chr1	63100000	64550000
-chr1	33600000	34500000	chr1	73850000	75600000
-chr1	33600000	34500000	chr1	87150000	88300000
-chr1	33600000	34500000	chr1	92950000	94100000
-chr1	33600000	34500000	chr1	131900000	132500000
-chr1	33600000	34500000	chr1	133000000	133650000
-chr1	63100000	64550000	chr1	63100000	64550000
-chr1	63100000	64550000	chr1	73850000	75600000
-chr1	63100000	64550000	chr1	87150000	88300000
-
-==> data/results/example_clique_sizes.bedGraph <==
-chr1	33600000	34500000	5
-chr1	63100000	64550000	5
-chr1	73850000	75600000	5
-chr1	87150000	88300000	5
-chr1	92950000	94100000	5
-chr1	131900000	132500000	5
-chr1	133000000	133650000	5
-chr10	61700000	62850000	5
-chr10	69350000	70300000	5
-chr10	76250000	77500000	5
+user@dev:/tmp$ zcat data/results/example_all_interactions_cliques.bedpe.gz | head
+chr1	33600000	34500000	chr1	92950000	94100000	CLIQUE_#304	5
+chr1	33600000	34500000	chr1	131900000	132500000	CLIQUE_#305	5
+chr1	33600000	34500000	chr1	33600000	34500000	CLIQUE_#321	5
+chr1	33600000	34500000	chr1	63100000	64550000	CLIQUE_#321	5
+chr1	33600000	34500000	chr1	73850000	75600000	CLIQUE_#321	5
+chr1	33600000	34500000	chr1	87150000	88300000	CLIQUE_#321	5
+chr1	33600000	34500000	chr1	133000000	133650000	CLIQUE_#321	5
+chr1	63100000	64550000	chr1	92950000	94100000	CLIQUE_#304	5
+chr1	63100000	64550000	chr1	131900000	132500000	CLIQUE_#305	5
+chr1	63100000	64550000	chr1	63100000	64550000	CLIQUE_#321	5
 ```
-
-</details>
 
 <details>
 <summary>Troubleshooting</summary>
@@ -212,7 +192,7 @@ If you get permission errors when using `-with-docker`:
 
 If you get an error similar to:
 ```
-Cannot find revision `v0.1.0` -- Make sure that it exists in the remote repository `https://github.com/robomics/call_tad_cliques`
+Cannot find revision `v1.1.0` -- Make sure that it exists in the remote repository `https://github.com/robomics/call_tad_cliques`
 ```
 
 try to remove folder `~/.nextflow/assets/robomics/call_tad_cliques` before running the workflow
