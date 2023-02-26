@@ -163,14 +163,13 @@ workflow {
             .map { tuple(it[0], it[1], it[3]) }
     )
 
-    call_cliques_cis_interactions(tads.join(merge_interactions.out.bedpe),
-                                  params.clique_size_thresh)
+    tads.join(merge_interactions.out.bedpe)
+        .set { interactions }
 
-    call_cliques_trans_interactions(tads.join(merge_interactions.out.bedpe),
-                                    params.clique_size_thresh)
+    interaction_types = ["cis-only", "trans-only", "all"]
 
-    call_cliques_all_interactions(tads.join(merge_interactions.out.bedpe),
-                                  params.clique_size_thresh)
+    call_cliques(interactions.combine(interaction_types),
+                 params.clique_size_thresh)
 }
 
 process generate_sample_sheet {
@@ -660,42 +659,9 @@ process merge_interactions {
         '''
 }
 
-process call_cliques_cis_interactions {
-    publishDir params.outdir, mode: 'copy',
-                              saveAs: {
-                                "cis_interactions/${it}"
-                              }
-    label 'short'
-    
-    cpus 1
+process call_cliques {
+    publishDir params.outdir, mode: 'copy'
 
-    input:
-        tuple val(id),
-              path(tads),
-              path(significant_interactions)
-        val min_clique_size
-
-    output:
-        tuple val(id), path("*_clique_interactions.bedpe"), emit: clique_interactions
-        tuple val(id), path("*_clique_sizes.bedGraph"), emit: clique_sizes
-
-    shell:
-        outprefix="${id}"
-        '''
-        call_cliques.py                   \
-            '!{tads}'                     \
-            '!{significant_interactions}' \
-            '!{outprefix}'                \
-            --interaction-type=cis-only   \
-            --clique-size-threshold=!{min_clique_size}
-        '''
-}
-
-process call_cliques_trans_interactions {
-    publishDir params.outdir, mode: 'copy',
-                              saveAs: {
-                                "trans_interactions/${it}"
-                              }
     label 'short'
 
     cpus 1
@@ -703,52 +669,25 @@ process call_cliques_trans_interactions {
     input:
         tuple val(id),
               path(tads),
-              path(significant_interactions)
+              path(significant_interactions),
+              val(interaction_type)
         val min_clique_size
 
     output:
-        tuple val(id), path("*_clique_interactions.bedpe"), emit: clique_interactions
-        tuple val(id), path("*_clique_sizes.bedGraph"), emit: clique_sizes
-
-    shell:
-        outprefix="${id}"
-        '''
-        call_cliques.py                   \
-            '!{tads}'                     \
-            '!{significant_interactions}' \
-            '!{outprefix}'                \
-            --interaction-type=trans-only \
-            --clique-size-threshold=!{min_clique_size}
-        '''
-}
-
-process call_cliques_all_interactions {
-    publishDir params.outdir, mode: 'copy',
-                              saveAs: {
-                                "all_interactions/${it}"
-                              }
-    label 'short'
-
-    cpus 1
-
-    input:
         tuple val(id),
-              path(tads),
-              path(significant_interactions)
-        val min_clique_size
-
-    output:
-        tuple val(id), path("*_clique_interactions.bedpe"), emit: clique_interactions
-        tuple val(id), path("*_clique_sizes.bedGraph"), emit: clique_sizes
+              val(interaction_type),
+              path("*.bedpe.gz"),
+        emit: cliques
 
     shell:
-        outprefix="${id}"
+        suffix=interaction_type.replaceAll('-', '_').replaceAll('_only', '')
+        outname="${id}_${suffix}_interactions_cliques.bedpe.gz"
         '''
-        call_cliques.py                   \
-            '!{tads}'                     \
-            '!{significant_interactions}' \
-            '!{outprefix}'                \
-            --interaction-type=all        \
-            --clique-size-threshold=!{min_clique_size}
+        call_cliques.py                                \
+            '!{tads}'                                  \
+            '!{significant_interactions}'              \
+            --interaction-type='!{interaction_type}'   \
+            --clique-size-threshold=!{min_clique_size} |
+                gzip -9 > '!{outname}'
         '''
 }
