@@ -15,7 +15,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from natsort import natsort_keygen
 from statsmodels.stats import multitest
 
 
@@ -192,7 +191,7 @@ def main():
     if args["drop_not_significant"]:
         df = df[df["significant"]].drop(columns=["significant"])
 
-    df = df.sort_values(by=["chrom1", "start1", "chrom2", "start2"], key=natsort_keygen())
+    df = df.sort_values(by=["chrom1", "start1", "chrom2", "start2"])
     df.columns = [f"#{df.columns[0]}"] + df.columns[1:].tolist()
 
     df.to_csv(sys.stdout, sep="\t", index=False, header=args["write_header"])
