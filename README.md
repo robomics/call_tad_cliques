@@ -134,11 +134,11 @@ user@dev:/tmp$ nextflow run --sample_sheet=samplesheet.tsv \
                             --assembly_gaps=data/gaps.txt.gz \
                             --outdir=data/results/ \
                             https://github.com/robomics/call_tad_cliques \
-                            -r v1.1.0 \
+                            -r v0.2.0 \
                             -with-singularity  # Replace this with -with-docker to use Docker instead
 
 N E X T F L O W  ~  version 22.10.7
-Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: 9a02af259a [v1.1.0]
+Launching `https://github.com/robomics/call_tad_cliques` [focused_bohr] DSL2 - revision: 9a02af259a [v0.2.0]
 executor >  local (16)
 [71/d00e78] process > check_sample_sheet                             [100%] 1 of 1 ✔
 [ad/a7b3ba] process > process_sample_sheet                           [100%] 1 of 1 ✔
@@ -192,7 +192,7 @@ If you get permission errors when using `-with-docker`:
 
 If you get an error similar to:
 ```
-Cannot find revision `v1.1.0` -- Make sure that it exists in the remote repository `https://github.com/robomics/call_tad_cliques`
+Cannot find revision `v0.2.0` -- Make sure that it exists in the remote repository `https://github.com/robomics/call_tad_cliques`
 ```
 
 try to remove folder `~/.nextflow/assets/robomics/call_tad_cliques` before running the workflow
