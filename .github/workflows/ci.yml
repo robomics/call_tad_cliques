@@ -179,4 +179,4 @@ jobs:
                        --outdir=data/out \
                        .
           
-          ls -lah data/out/test_{all,cis,trans}_interactions_cliques.bedpe.gz
+          ls -lah data/out/test_{all,cis,trans}_{cliques,domains}*.gz
