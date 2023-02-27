@@ -16,7 +16,7 @@ The workflow is largely based on [this](https://github.com/Chrom3D/INC-tutorial)
 
 ### Software requirements
 
-- Nextflow (at least version: v20.07.1. Pipeline was developed using v22.10.1)
+- Nextflow (at least version: v20.07.1. Pipeline was developed using v22.10.7)
 - Docker or Singularity/Apptainer
 
 Running the pipeline without containers is technically possible, but it is not recommended.
@@ -160,28 +160,28 @@ CPU hours   : 0.1
 Succeeded   : 16
 ```
 
-This will create a `data/results/` folder with the following files in BEDPE format:
-- `example_all_clique_interactions.bedpe.gz` - Cliques computed from all significant interactions (i.e. both intra and inter-chromosomal interactions).
-- `example_cis_only_clique_interactions.bedpe.gz` - Cliques computed from significant intra-chromosomal interactions only.
-- `example_trans_only_clique_interactions.bedpe.gz` - Cliques computed from significant inter-chromosomal interactions only.
+This will create a `data/results/` folder with the following files:
+- `example_all_cliques.tsv.gz` - TSV with the list of cliques computed from all significant interactions (i.e. both intra and inter-chromosomal interactions).
+- `example_all_domains.bed.gz` - BED file with the list of domains part of cliques computed from all significant interactions. The last column encodes the domain ID.
+- `example_cis_cliques.tsv.gz` - Same as `example_all_cliques.tsv.gz`, but for intra-chromosomal interactions only.
+- `example_cis_domains.bed.gz` - Same as `example_all_domains.bed.gz`, but for intra-chromosomal interactions only.
+- `example_trans_cliques.tsv.gz` - Same as `example_all_cliques.tsv.gz`, but for inter-chromosomal interactions only.
+- `example_trans_domains.bed.gz` - Same as `example_all_domains.bed.gz`, but for inter-chromosomal interactions only.
 
-The `name` and `score` fields in the above BEDPE store the clique identifier and maximal clique size respectibely
-
-
-### Example output
+The list of pairs of interacting domains can be generated using `bin/generate_cliques_bedpe.py`
 
 ```console
-user@dev:/tmp$ zcat data/results/example_all_interactions_cliques.bedpe.gz | head
-chr1	33600000	34500000	chr1	92950000	94100000	CLIQUE_#304	5
-chr1	33600000	34500000	chr1	131900000	132500000	CLIQUE_#305	5
-chr1	33600000	34500000	chr1	33600000	34500000	CLIQUE_#321	5
-chr1	33600000	34500000	chr1	63100000	64550000	CLIQUE_#321	5
-chr1	33600000	34500000	chr1	73850000	75600000	CLIQUE_#321	5
-chr1	33600000	34500000	chr1	87150000	88300000	CLIQUE_#321	5
-chr1	33600000	34500000	chr1	133000000	133650000	CLIQUE_#321	5
-chr1	63100000	64550000	chr1	92950000	94100000	CLIQUE_#304	5
-chr1	63100000	64550000	chr1	131900000	132500000	CLIQUE_#305	5
-chr1	63100000	64550000	chr1	63100000	64550000	CLIQUE_#321	5
+user@dev:/tmp$ bin/generate_cliques_bedpe.py data/results/example_cis_domains.bed.gz data/results/example_cis_cliques.tsv.gz |
+chr3	94300000	95850000	chr3	94300000	95850000	CLIQUE_#0
+chr3	94300000	95850000	chr3	108150000	108950000	CLIQUE_#0
+chr3	94300000	95850000	chr3	116000000	116900000	CLIQUE_#0
+chr3	94300000	95850000	chr3	137750000	138500000	CLIQUE_#0
+chr3	94300000	95850000	chr3	152100000	153900000	CLIQUE_#0
+chr3	108150000	108950000	chr3	94300000	95850000	CLIQUE_#0
+chr3	108150000	108950000	chr3	108150000	108950000	CLIQUE_#0
+chr3	108150000	108950000	chr3	116000000	116900000	CLIQUE_#0
+chr3	108150000	108950000	chr3	137750000	138500000	CLIQUE_#0
+chr3	108150000	108950000	chr3	152100000	153900000	CLIQUE_#0
 ```
 
 <details>
