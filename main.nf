@@ -141,10 +141,8 @@ workflow {
                                                params.cis_fdr)
 
     // Process inter-chromosomal interactions
-    collect_interchrom_interactions(trans_coolers,
-                                    mask)
-
-    select_significant_interchrom_interactions(collect_interchrom_interactions.out.bedpe,
+    select_significant_interchrom_interactions(trans_coolers,
+                                               mask,
                                                params.trans_log_ratio,
                                                params.trans_fdr)
 
@@ -504,7 +502,7 @@ process select_significant_intrachrom_interactions {
         '''
 }
 
-process collect_interchrom_interactions {
+process select_significant_interchrom_interactions {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'long'
 
@@ -514,16 +512,18 @@ process collect_interchrom_interactions {
         tuple val(id),
               path(cooler),
               val(resolution)
-        path mask
+        path blacklist
+        val log_ratio
+        val fdr
 
     output:
         tuple val(id),
-              path("*.bedpe.zst"),
+              path("*_significant_trans_interactions.bedpe.zst"),
               val(resolution),
         emit: bedpe
 
     shell:
-        outname="${cooler.baseName}_trans_interactions.bedpe.zst"
+        outname="${cooler.baseName}_significant_trans_interactions.bedpe.zst"
         '''
         set -o pipefail
 
@@ -533,52 +533,15 @@ process collect_interchrom_interactions {
             cooler='!{cooler}::/resolutions/!{resolution}'
         fi
 
-        cooler dump --join "$cooler" |
-            awk '$1!=$4{print}'      |
-            bedtools pairtobed -a stdin                 \
-                               -b <(zstdcat '!{mask}')  \
-                               -type neither            |
-            zstd -T!{task.cpus}                  \
-                 -!{params.zstd_compression_lvl} \
-                 -o '!{outname}'
-        '''
-}
-
-process select_significant_interchrom_interactions {
-    // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'short'
-
-    cpus 1
-
-    input:
-        tuple val(id),
-              path(bedpe),
-              val(resolution)
-        val log_ratio
-        val fdr
-
-    output:
-        tuple val(id),
-              path("*_significant_trans_significant.bedpe.zst"),
-              val(resolution),
-        emit: bedpe
-
-    shell:
-        outname=bedpe.toString()
-                     .replace("_trans_interactions.bedpe.zst",
-                              "_significant_trans_significant.bedpe.zst")
-        '''
-        set -o pipefail
-
-        run_nchg.py                        \
-            --fdr='!{fdr}'                 \
-            --log-ratio='!{log_ratio}'     \
-            --drop-not-significant         \
-            <(zstdcat '!{bedpe}')          \
-            inter                          |
-        cut -f 1-6,8 |
-        zstd -T!{task.cpus}                  \
-             -!{params.zstd_compression_lvl} \
+        extract_significant_trans_interactions.py  \
+            "$cooler"                              \
+            --blacklist='!{blacklist}'             \
+            --fdr='!{fdr}'                         \
+            --log-ratio='!{log_ratio}'             \
+            --drop-not-significant                 |
+        cut -f 1-6,8                               |
+        zstd -T!{task.cpus}                        \
+             -!{params.zstd_compression_lvl}       \
              -o '!{outname}'
         '''
 }
@@ -676,18 +639,21 @@ process call_cliques {
     output:
         tuple val(id),
               val(interaction_type),
-              path("*.bedpe.gz"),
+              path("*.bed.gz"),
+              path("*.tsv.gz"),
         emit: cliques
 
     shell:
         suffix=interaction_type.replaceAll('-', '_').replaceAll('_only', '')
-        outname="${id}_${suffix}_interactions_cliques.bedpe.gz"
+        outprefix="${id}_${suffix}"
         '''
         call_cliques.py                                \
             '!{tads}'                                  \
             '!{significant_interactions}'              \
+            '!{outprefix}'                             \
             --interaction-type='!{interaction_type}'   \
-            --clique-size-threshold=!{min_clique_size} |
-                gzip -9 > '!{outname}'
+            --clique-size-threshold=!{min_clique_size}
+
+        gzip -9 *.{bed,tsv}
         '''
 }

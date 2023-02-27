@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-import itertools
 import pathlib
 import re
 import sys
@@ -101,20 +100,20 @@ def build_tad_graph(beads: list, interactions: set) -> networkx.Graph:
 
 
 def collect_clique_interactions(cliques, clique_size_thresh: int) -> pd.DataFrame:
-    records = {}
+    records = []
     clique_id = 0
     for clique in cliques:
-        if len(clique) < clique_size_thresh:
+        clique_size = len(clique)
+        if clique_size < clique_size_thresh:
             continue
 
-        for node1, node2 in itertools.product(clique, repeat=2):
-            records[Interaction3D(node1, node2)] = tuple([f"CLIQUE_#{clique_id}", len(clique)])
-
+        clique_name = f"CLIQUE_#{clique_id}"
+        for node in clique:
+            records.append(list(node.get_coords()) + [clique_name, clique_size])
         clique_id += 1
 
-    records = (list(n1.get_coords()) + list(n2.get_coords()) + list(val) for ((n1, n2), val) in records.items())
-    columns = bf.SCHEMAS["bedpe"][:8]
-    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom1", "start1", "name", "chrom2", "start2"])
+    columns = bf.SCHEMAS["bed"][:5]
+    return pd.DataFrame(records, columns=columns).sort_values(by=["chrom", "start", "name"])
 
 
 def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[set, list]:
@@ -186,6 +185,32 @@ def import_interactions(path_to_bedpe: pathlib.Path, interaction_type: str, sche
         return df
 
 
+def generate_list_of_domains_with_id(clique_interactions: pd.DataFrame) -> pd.DataFrame:
+    domains = (
+        clique_interactions[["chrom", "start", "end"]]
+        .drop_duplicates()
+        .sort_values(by=["chrom", "start"])
+        .reset_index(drop=True)
+    )
+    domains.index.name = "id"
+
+    return domains
+
+
+def generate_list_of_cliques(clique_interactions: pd.DataFrame, tads: pd.DataFrame) -> pd.DataFrame:
+    cliques = clique_interactions.merge(tads.reset_index(), on=["chrom", "start", "end"], how="left")
+    cliques = cliques[["id", "name"]].groupby(by=["name"]).aggregate(lambda ids: ",".join(str(i) for i in sorted(ids)))
+
+    cliques.rename(columns={"id": "tad_ids"}, inplace=True)
+    if len(cliques) == 0:
+        cliques["size"] = pd.Series(dtype=int)
+        return cliques
+
+    cliques["size"] = cliques["tad_ids"].str.count(",") + 1
+
+    return cliques
+
+
 def make_cli() -> argparse.ArgumentParser:
     def existing_file(arg):
         if (file := pathlib.Path(arg)).exists():
@@ -207,6 +232,7 @@ def make_cli() -> argparse.ArgumentParser:
         type=existing_file,
         help="Path to a BEDPE with the set of significant cis and trans interactions.",
     )
+    cli.add_argument("output-prefix", type=pathlib.Path, help="Output path prefix.")
     cli.add_argument(
         "--interaction-type",
         type=str,
@@ -220,12 +246,28 @@ def make_cli() -> argparse.ArgumentParser:
         help="Minimum clique size. Cliques smaller than this threshold will be dropped.",
         default=5,
     )
+    cli.add_argument("--force", action="store_true", default=False, help="Overwrite existing files (if any).")
 
     return cli
 
 
+def handle_path_collisions(*paths):
+    collisions = [f for f in paths if f.exists()]
+    if len(collisions) != 0:
+        collisions = "\n - ".join((str(p) for p in collisions))
+        raise RuntimeError(
+            f"Refusing to overwrite file(s):\n - {collisions}\nPass --force to overwrite existing file(s)."
+        )
+
+
 def main():
     args = vars(make_cli().parse_args())
+
+    domain_file = pathlib.Path(str(args["output-prefix"]) + "_domains.bed")
+    clique_file = pathlib.Path(str(args["output-prefix"]) + "_cliques.tsv")
+
+    if not args["force"]:
+        handle_path_collisions(domain_file, clique_file)
 
     domains = import_domains(args["domains"])
     interactions = import_interactions(args["interactions"], args["interaction_type"])
@@ -237,7 +279,13 @@ def main():
     cliques = tuple(networkx.find_cliques(tad_graph))
 
     clique_interactions = collect_clique_interactions(cliques, clique_size_thresh)
-    clique_interactions.to_csv(sys.stdout, index=False, header=False, sep="\t")
+
+    domains = generate_list_of_domains_with_id(clique_interactions)
+    cliques = generate_list_of_cliques(clique_interactions, domains)
+
+    domains = domains.reset_index()[["chrom", "start", "end", "id"]]
+    domains.to_csv(domain_file, sep="\t", index=False, header=False)
+    cliques.to_csv(clique_file, sep="\t", index=True, header=True)
 
 
 if __name__ == "__main__":

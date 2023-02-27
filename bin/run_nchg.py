@@ -158,11 +158,11 @@ def correct_pval(df: pd.DataFrame, correction_method: str, log_ratio_thresh: flo
     df["pvalue_corrected"] = multitest.multipletests(df["pvalue"], method=correction_method)[1]
 
     # Mark significant interactions
-    df["significant"] = (df["log_ratio"] >= log_ratio_thresh) & (df["pvalue_corrected"] <= fdr_thresh)
+    if log_ratio_thresh > 0 or fdr_thresh < 1:
+        df = df[(df["log_ratio"] >= log_ratio_thresh) & (df["pvalue_corrected"] <= fdr_thresh)]
 
     # Reorder columns and return df
     columns.insert(columns.index("pvalue") + 1, "pvalue_corrected")
-    columns.insert(columns.index("pvalue") + 2, "significant")
 
     return df[columns]
 
@@ -174,6 +174,10 @@ def setup_logger(level=logging.INFO):
 
 def main():
     args = vars(make_cli().parse_args())
+
+    if not args["drop_not_significant"]:
+        args["log_ratio"] = 0.0
+        args["fdr_thresh"] = 1.0
 
     df = run_nchg(
         args["bedpe"],
@@ -188,11 +192,10 @@ def main():
         fdr_thresh=args["fdr"],
     )
 
-    if args["drop_not_significant"]:
-        df = df[df["significant"]].drop(columns=["significant"])
-
     df = df.sort_values(by=["chrom1", "start1", "chrom2", "start2"])
-    df.columns = [f"#{df.columns[0]}"] + df.columns[1:].tolist()
+
+    if args["write_header"]:
+        df.columns = [f"#{df.columns[0]}"] + df.columns[1:].tolist()
 
     df.to_csv(sys.stdout, sep="\t", index=False, header=args["write_header"])
 
