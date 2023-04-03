@@ -665,7 +665,7 @@ process call_cliques {
 
 
 process plot_maximal_clique_sizes {
-    publishDir params.outdir
+    publishDir "${params.outdir}/plots"
 
     label 'very_short'
 
