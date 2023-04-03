@@ -621,7 +621,7 @@ process merge_interactions {
 }
 
 process call_cliques {
-    publishDir params.outdir, mode: 'copy'
+    publishDir params.outdir
 
     label 'short'
 
