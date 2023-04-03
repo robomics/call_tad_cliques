@@ -85,7 +85,6 @@ def run_nchg(bedpe: pathlib.Path, nchg_bin: pathlib.Path) -> pd.DataFrame:
 
     logging.debug("Spawning subprocess for %s...", cmd)
     with sp.Popen(cmd, stdin=sp.DEVNULL, stdout=sp.PIPE, stderr=None, encoding="utf-8") as proc:
-
         columns = [
             "chrom1",
             "start1",
@@ -180,7 +179,6 @@ def cooler_dump_chunked(
 
 
 def dump_pixels(cooler_uri: str, dest_file, path_to_blacklist: Union[None, pathlib.Path]):
-
     if path_to_blacklist is None:
         blacklist_df = None
     else:

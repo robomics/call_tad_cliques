@@ -114,7 +114,6 @@ def run_nchg(bedpe: pathlib.Path, nchg_bin: pathlib.Path, method: str, resolutio
 
         logging.debug("Spawning subprocess for %s...", cmd)
         with sp.Popen(cmd, stdin=sp.DEVNULL, stdout=sp.PIPE, stderr=None, encoding="utf-8") as proc:
-
             columns = [
                 "chrom1",
                 "start1",

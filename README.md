@@ -29,7 +29,7 @@ Have a look at the `env.yml` for the list of dependencies to be installed.
 To install the dependencies in a Conda environment named `myenv`, run the following:
 
 ```bash
-conda env update --name myenv --file env.yml --prune 
+conda env update --name myenv --file env.yml --prune
 ```
 
 You will also need to compile `NCHG` from the source code available at [Chrom3D/preprocess_scripts](https://github.com/Chrom3D/preprocess_scripts).

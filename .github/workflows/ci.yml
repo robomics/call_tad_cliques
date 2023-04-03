@@ -136,13 +136,13 @@ jobs:
       run: |
         src="data/$(basename "$TEST_DATASET_URL")"
         dest="$src.new"
-        
+
         pip3 install -r requirements.txt
-        
+
         for res in 100000 1000000; do
           cooler cp "$src::/resolutions/$res" "$dest::/resolutions/$res"
         done
-        
+
         mv "$dest" "$src"
 
 
@@ -178,5 +178,5 @@ jobs:
                        --cooler_trans="data/$(basename "$TEST_DATASET_URL")::/resolutions/1000000" \
                        --outdir=data/out \
                        .
-          
+
           ls -lah data/out/test_{all,cis,trans}_{cliques,domains}*.gz
