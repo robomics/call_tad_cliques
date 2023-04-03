@@ -168,6 +168,13 @@ workflow {
 
     call_cliques(interactions.combine(interaction_types),
                  params.clique_size_thresh)
+
+    call_cliques.out.cliques
+        .map { tuple(it[1], it[3]) }
+        .groupTuple()
+        .set { cliques }
+
+    plot_maximal_clique_sizes(cliques)
 }
 
 process generate_sample_sheet {
@@ -653,5 +660,37 @@ process call_cliques {
             --clique-size-threshold=!{min_clique_size}
 
         gzip -9 *.{bed,tsv}
+        '''
+}
+
+
+process plot_maximal_clique_sizes {
+    publishDir params.outdir
+
+    label 'very_short'
+
+    cpus 1
+
+    input:
+        tuple val(interaction_type),
+              path(cliques)
+
+    output:
+        tuple val(interaction_type),
+              path("*.png"), emit: png
+
+        tuple val(interaction_type),
+              path("*.svg"), emit: svg
+
+    shell:
+        '''
+        plot_maximal_clique_sizes.py \\
+            *_cliques.tsv.gz         \\
+            -o '!{interaction_type}_maximal_clique_size_abs'
+
+        plot_maximal_clique_sizes.py \\
+            *_cliques.tsv.gz         \\
+            --stat='density'         \\
+            -o '!{interaction_type}_maximal_clique_size_rel'
         '''
 }
