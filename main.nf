@@ -351,8 +351,6 @@ process process_tads {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
     label 'process_medium'
 
-    cpus 1
-
     input:
         tuple val(id),
               path(cooler),
