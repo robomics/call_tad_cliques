@@ -195,8 +195,8 @@ process generate_sample_sheet {
         done
 
         printf 'sample\\tcooler_cis\\tcooler_trans\\ttads\\n' > sample_sheet.tsv
-        printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \
-                                      '!{cooler_cis}' '!{cooler_trans}' \
+        printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \\
+                                      '!{cooler_cis}' '!{cooler_trans}' \\
                                       '!{tads}' >> sample_sheet.tsv
         '''
 }
@@ -311,8 +311,8 @@ process generate_bed_mask {
         cat *.bed.tmp |
         sort -k1,1V -k2,2n --parallel=!{task.cpus} |
         bedtools merge -i stdin |
-        zstd -T!{task.cpus}                  \
-             -!{params.zstd_compression_lvl} \
+        zstd -T!{task.cpus}                  \\
+             -!{params.zstd_compression_lvl} \\
              -o mask.bed.zst
         '''
 }
@@ -338,11 +338,11 @@ process bedtools_bed_setdiff {
         '''
         set -o pipefail
 
-        bedtools subtract -A                      \
-                          -a <(zstdcat '!{bed}')  \
+        bedtools subtract -A                      \\
+                          -a <(zstdcat '!{bed}')  \\
                           -b <(zstdcat '!{mask}') |
-            zstd -T!{task.cpus}                   \
-                 -!{params.zstd_compression_lvl}  \
+            zstd -T!{task.cpus}                   \\
+                 -!{params.zstd_compression_lvl}  \\
                  -o '!{outname}'
         '''
 }
@@ -378,16 +378,16 @@ process process_tads {
                 cooler='!{cooler}'
             fi
 
-            hicFindTADs -p '!{task.cpus}'          \
-                        --matrix "$cooler"         \
-                        --outPrefix '!{outprefix}' \
+            hicFindTADs -p '!{task.cpus}'          \\
+                        --matrix "$cooler"         \\
+                        --outPrefix '!{outprefix}' \\
                         --correctForMultipleTesting fdr
         else
             zcat -f '!{tads}' > '!{outprefix}_domains.bed'
         fi
 
-        zstd -T!{task.cpus}                  \
-             -!{params.zstd_compression_lvl} \
+        zstd -T!{task.cpus}                  \\
+             -!{params.zstd_compression_lvl} \\
              '!{outprefix}_domains.bed'
 
         mv '!{outprefix}_domains.bed.zst' '!{outprefix}_tads.bed.zst'
@@ -415,11 +415,11 @@ process fill_gaps_between_tads {
         '''
         set -o pipefail
 
-        fill_gaps_between_tads.py  \
-            '!{chrom_sizes}'        \
+        fill_gaps_between_tads.py   \\
+            '!{chrom_sizes}'        \\
             '!{tads}'               |
-            zstd -T!{task.cpus}                  \
-                 -!{params.zstd_compression_lvl} \
+            zstd -T!{task.cpus}                  \\
+                 -!{params.zstd_compression_lvl} \\
                  -o '!{outname}'
         '''
 }
@@ -453,11 +453,11 @@ process map_intrachrom_interactions {
             cooler='!{cooler}::/resolutions/!{resolution}'
         fi
 
-        map_intrachrom_interactions_to_tads.py     \
-            "$cooler"                              \
+        map_intrachrom_interactions_to_tads.py     \\
+            "$cooler"                              \\
             '!{tads}'                              |
-            zstd -T!{task.cpus}                    \
-                 -!{params.zstd_compression_lvl}   \
+            zstd -T!{task.cpus}                    \\
+                 -!{params.zstd_compression_lvl}   \\
                  -o '!{outname}'
         '''
 }
@@ -488,16 +488,16 @@ process select_significant_intrachrom_interactions {
         '''
         set -o pipefail
 
-        run_nchg.py                        \
-            --fdr='!{fdr}'                 \
-            --log-ratio='!{log_ratio}'     \
-            --resolution='!{resolution}'   \
-            --drop-not-significant         \
-            <(zstdcat '!{bedpe}')          \
+        run_nchg.py                        \\
+            --fdr='!{fdr}'                 \\
+            --log-ratio='!{log_ratio}'     \\
+            --resolution='!{resolution}'   \\
+            --drop-not-significant         \\
+            <(zstdcat '!{bedpe}')          \\
             intra                          |
         cut -f 1-6,8 |
-        zstd -T!{task.cpus}                  \
-             -!{params.zstd_compression_lvl} \
+        zstd -T!{task.cpus}                  \\
+             -!{params.zstd_compression_lvl} \\
              -o '!{outname}'
         '''
 }
@@ -533,15 +533,15 @@ process select_significant_interchrom_interactions {
             cooler='!{cooler}::/resolutions/!{resolution}'
         fi
 
-        extract_significant_trans_interactions.py  \
-            "$cooler"                              \
-            --blacklist='!{blacklist}'             \
-            --fdr='!{fdr}'                         \
-            --log-ratio='!{log_ratio}'             \
+        extract_significant_trans_interactions.py  \\
+            "$cooler"                              \\
+            --blacklist='!{blacklist}'             \\
+            --fdr='!{fdr}'                         \\
+            --log-ratio='!{log_ratio}'             \\
             --drop-not-significant                 |
         cut -f 1-6,8                               |
-        zstd -T!{task.cpus}                        \
-             -!{params.zstd_compression_lvl}       \
+        zstd -T!{task.cpus}                        \\
+             -!{params.zstd_compression_lvl}       \\
              -o '!{outname}'
         '''
 }
@@ -586,8 +586,8 @@ process map_interchrom_interactions_to_tads {
         paste left.fifo right.fifo                  |
             awk '$1!="." && $4!="."'                |
             sort -u -k1,1V -k2,2n -k4,4V -k5,5n     |
-        zstd -T!{task.cpus}                         \
-             -!{params.zstd_compression_lvl}        \
+        zstd -T!{task.cpus}                         \\
+             -!{params.zstd_compression_lvl}        \\
              -o '!{outname}'
         '''
 }
@@ -616,8 +616,8 @@ process merge_interactions {
         zstdcat *.bedpe.zst                  |
         awk '$1!="." && $4!="."'             |
         sort -u -k1,1V -k2,2n -k4,4V -k5,5n  |
-        zstd -T!{task.cpus}                  \
-             -!{params.zstd_compression_lvl} \
+        zstd -T!{task.cpus}                  \\
+             -!{params.zstd_compression_lvl} \\
              -o '!{outname}'
         '''
 }
@@ -647,11 +647,11 @@ process call_cliques {
         suffix=interaction_type.replaceAll('-', '_').replaceAll('_only', '')
         outprefix="${id}_${suffix}"
         '''
-        call_cliques.py                                \
-            '!{tads}'                                  \
-            '!{significant_interactions}'              \
-            '!{outprefix}'                             \
-            --interaction-type='!{interaction_type}'   \
+        call_cliques.py                                \\
+            '!{tads}'                                  \\
+            '!{significant_interactions}'              \\
+            '!{outprefix}'                             \\
+            --interaction-type='!{interaction_type}'   \\
             --clique-size-threshold=!{min_clique_size}
 
         gzip -9 *.{bed,tsv}
