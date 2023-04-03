@@ -177,6 +177,9 @@ jobs:
                        --cooler_cis="data/$(basename "$TEST_DATASET_URL")::/resolutions/100000" \
                        --cooler_trans="data/$(basename "$TEST_DATASET_URL")::/resolutions/1000000" \
                        --outdir=data/out \
+                       --max_cpus=2 \
+                       --max_memory=6.GB \
+                       --max_time=2.h \
                        .
 
           ls -lah data/out/test_{all,cis,trans}_{cliques,domains}*.gz

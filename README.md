@@ -129,7 +129,10 @@ example  data/4DNFI74YHN5W.mcool::/resolutions/50000   data/4DNFI74YHN5W.mcool::
 
 Finally, run the workflow with:
 ```console
-user@dev:/tmp$ nextflow run --sample_sheet=samplesheet.tsv \
+user@dev:/tmp$ nextflow run --max_cpus=8 \
+                            --max_memory=16.GB \
+                            --max_time=2.h \
+                            --sample_sheet=samplesheet.tsv \
                             --cytoband=data/cytoBand.txt.gz \
                             --assembly_gaps=data/gaps.txt.gz \
                             --outdir=data/results/ \
@@ -154,6 +157,7 @@ executor >  local (16)
 [73/4ca264] process > map_interchrom_interactions_to_tads (1)        [100%] 1 of 1 ✔
 [ad/03bff0] process > merge_interactions (1)                         [100%] 1 of 1 ✔
 [eb/5d93d5] process > call_cliques (3)                               [100%] 3 of 3 ✔
+[e5/6cf437] process > plot_maximal_clique_sizes (1)                  [100%] 3 of 3 ✔
 Completed at: 26-Feb-2023 20:40:59
 Duration    : 7m 30s
 CPU hours   : 0.1
@@ -167,6 +171,7 @@ This will create a `data/results/` folder with the following files:
 - `example_cis_domains.bed.gz` - Same as `example_all_domains.bed.gz`, but for intra-chromosomal interactions only.
 - `example_trans_cliques.tsv.gz` - Same as `example_all_cliques.tsv.gz`, but for inter-chromosomal interactions only.
 - `example_trans_domains.bed.gz` - Same as `example_all_domains.bed.gz`, but for inter-chromosomal interactions only.
+- `plots/*.{png,svg}` - Plots showing the maximal clique size distribution.
 
 The list of pairs of interacting domains can be generated using `bin/generate_cliques_bedpe.py`
 
