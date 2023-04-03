@@ -178,7 +178,7 @@ workflow {
 }
 
 process generate_sample_sheet {
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -209,7 +209,7 @@ process generate_sample_sheet {
 }
 
 process check_sample_sheet {
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -226,7 +226,7 @@ process check_sample_sheet {
 }
 
 process process_sample_sheet {
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -245,7 +245,7 @@ process process_sample_sheet {
 
 process extract_chrom_sizes_from_cooler {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -274,7 +274,7 @@ process extract_chrom_sizes_from_cooler {
 
 process generate_bed_mask {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -326,7 +326,7 @@ process generate_bed_mask {
 
 process bedtools_bed_setdiff {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -401,7 +401,7 @@ process process_tads {
 
 process fill_gaps_between_tads {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -431,7 +431,7 @@ process fill_gaps_between_tads {
 
 process map_intrachrom_interactions {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -469,7 +469,7 @@ process map_intrachrom_interactions {
 
 process select_significant_intrachrom_interactions {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'short'
+    label 'duration_short'
 
     cpus 1
 
@@ -509,7 +509,7 @@ process select_significant_intrachrom_interactions {
 
 process select_significant_interchrom_interactions {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'long'
+    label 'duration_long'
 
     cpus 1
 
@@ -553,7 +553,7 @@ process select_significant_interchrom_interactions {
 
 process map_interchrom_interactions_to_tads {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'short'
+    label 'duration_short'
 
     cpus 1
 
@@ -599,7 +599,7 @@ process map_interchrom_interactions_to_tads {
 
 process merge_interactions {
     // publishDir "${params.outdir}/dbg", mode: 'copy'
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
@@ -630,7 +630,7 @@ process merge_interactions {
 process call_cliques {
     publishDir params.outdir
 
-    label 'short'
+    label 'duration_short'
 
     cpus 1
 
@@ -667,7 +667,7 @@ process call_cliques {
 process plot_maximal_clique_sizes {
     publishDir "${params.outdir}/plots"
 
-    label 'very_short'
+    label 'duration_very_short'
 
     cpus 1
 
