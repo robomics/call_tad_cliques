@@ -48,10 +48,14 @@ def make_cli() -> argparse.ArgumentParser:
     cli = argparse.ArgumentParser(description="Run NCHG and identify significant trans interactions")
 
     cli.add_argument(
-        "cooler", type=str, help="Path to a cooler file with the interactions to be processed (URI syntax supported)."
+        "cooler",
+        type=str,
+        help="Path to a cooler file with the interactions to be processed (URI syntax supported).",
     )
     cli.add_argument(
-        "--blacklist", type=existing_file, help="Path to a BED3+ file with a list of regions to be excluded."
+        "--blacklist",
+        type=existing_file,
+        help="Path to a BED3+ file with a list of regions to be excluded.",
     )
     cli.add_argument("--fdr", type=probability, default=0.01, help="FDR threshold.")
     cli.add_argument(

@@ -246,7 +246,12 @@ def make_cli() -> argparse.ArgumentParser:
         help="Minimum clique size. Cliques smaller than this threshold will be dropped.",
         default=5,
     )
-    cli.add_argument("--force", action="store_true", default=False, help="Overwrite existing files (if any).")
+    cli.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="Overwrite existing files (if any).",
+    )
 
     return cli
 

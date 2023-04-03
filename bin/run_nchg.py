@@ -45,7 +45,11 @@ def make_cli() -> argparse.ArgumentParser:
 
     cli = argparse.ArgumentParser(description="Run NCHG and identify significant interactions")
 
-    cli.add_argument("bedpe", type=file, help="Path to a BEDPE with the interactions to be processed.")
+    cli.add_argument(
+        "bedpe",
+        type=file,
+        help="Path to a BEDPE with the interactions to be processed.",
+    )
     cli.add_argument("method", choices={"intra", "inter"}, help="Processing method.")
     cli.add_argument(
         "--resolution",
@@ -54,7 +58,10 @@ def make_cli() -> argparse.ArgumentParser:
         help="Resolution in bp to be passed to NCHG. Required when method=intra.",
     )
     cli.add_argument(
-        "--fdr", type=probability, default=0.01, help="FDR threshold used to identify significant interactions."
+        "--fdr",
+        type=probability,
+        default=0.01,
+        help="FDR threshold used to identify significant interactions.",
     )
     cli.add_argument(
         "--log-ratio",

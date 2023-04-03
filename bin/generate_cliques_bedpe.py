@@ -23,8 +23,16 @@ def make_cli() -> argparse.ArgumentParser:
         description="Convert the output of robomics/call_tad_cliques to a BEDPE with pairs of domains taking part in maximal cliques."
     )
 
-    cli.add_argument("domains", type=existing_file, help="Path to a BED file with the list of domains.")
-    cli.add_argument("cliques", type=existing_file, help="Path to a TSV file with the list of cliques.")
+    cli.add_argument(
+        "domains",
+        type=existing_file,
+        help="Path to a BED file with the list of domains.",
+    )
+    cli.add_argument(
+        "cliques",
+        type=existing_file,
+        help="Path to a TSV file with the list of cliques.",
+    )
 
     return cli
 
@@ -74,7 +82,11 @@ def main():
     df = df[["chrom1", "start1", "end1", "chrom2", "start2", "end2", "clique"]].sort_values(
         by=["chrom1", "start1", "chrom2", "start2"]
     )
-    df = df.sort_values(by=["clique"], kind="stable", key=lambda idx: idx.str.removeprefix("CLIQUE_#").astype(int))
+    df = df.sort_values(
+        by=["clique"],
+        kind="stable",
+        key=lambda idx: idx.str.removeprefix("CLIQUE_#").astype(int),
+    )
 
     df.to_csv(sys.stdout, sep="\t", index=False, header=False)
 

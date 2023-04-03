@@ -17,6 +17,6 @@ if __name__ == "__main__":
     for array in json.load(sys.stdin)["gap"].values():
         records.extend([[str(r[1]), int(r[2]), int(r[3])] for r in array])
 
-    pd.DataFrame(records, columns=["chrom", "start", "end"]).sort_values(by=["chrom", "start", "end"]).to_csv(
-        sys.stdout, sep="\t", header=False, index=False
-    )
+    pd.DataFrame(records, columns=["chrom", "start", "end"]).sort_values(
+        by=["chrom", "start", "end"]
+    ).to_csv(sys.stdout, sep="\t", header=False, index=False)
