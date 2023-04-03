@@ -52,6 +52,13 @@ def make_cli() -> argparse.ArgumentParser:
     )
 
     cli.add_argument(
+        "--raise-on-empty-files",
+        action="store_true",
+        default=False,
+        help="Raise an exception when any of the input file(s) is empty.",
+    )
+
+    cli.add_argument(
         "--force",
         action="store_true",
         default=False,
@@ -85,11 +92,11 @@ def save_plot_to_file(fig: plt.Figure, outprefix: pathlib.Path, force: bool, clo
         plt.close(fig)
 
 
-def read_cliques(cliques: pathlib.Path) -> pd.DataFrame:
+def read_cliques(cliques: pathlib.Path, raise_on_empty_files: bool) -> pd.DataFrame:
     df = pd.read_table(cliques).rename(columns={"name": "clique"})
     assert df.columns.tolist() == ["clique", "tad_ids", "size"]
 
-    if len(df) == 0:
+    if raise_on_empty_files and len(df) == 0:
         raise RuntimeError(f"Unable to read any record from {cliques}")
 
     return df.set_index("clique")
@@ -143,7 +150,7 @@ def main():
     if len(labels) != len(path_to_cliques):
         raise RuntimeError(f"Expected {len(path_to_cliques)} labels, found {len(labels)}")
 
-    cliques = {label: read_cliques(path) for label, path in zip(labels, args["cliques"])}
+    cliques = {label: read_cliques(path, args["raise_on_empty_files"]) for label, path in zip(labels, args["cliques"])}
 
     fig = plot_maximal_clique_sizes(cliques, stat=args["stat"])
     save_plot_to_file(fig, args["output_prefix"], args["force"])
