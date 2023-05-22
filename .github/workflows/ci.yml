@@ -120,9 +120,7 @@ jobs:
     - name: Generate requirements.txt
       if: steps.cache-dataset.outputs.cache-hit != 'true'
       run: |
-        echo 'cooler==0.8.11' > requirements.txt
-        echo 'matplotlib<3.6' >> requirements.txt
-        echo 'numpy<1.24' >> requirements.txt
+        echo 'cooler==0.9.1' > requirements.txt
 
     - name: Setup Python
       if: steps.cache-dataset.outputs.cache-hit != 'true'
