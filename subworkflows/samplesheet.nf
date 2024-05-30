@@ -104,7 +104,7 @@ process GENERATE {
             fi
         done
 
-        printf 'sample\\thic_file\\ttads\\n' > sample_sheet.tsv
+        printf 'sample\\thic_file\\tresolution\\ttads\\n' > sample_sheet.tsv
         printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \\
                                  '!{hic_file}' \\
                                  '!{resolution}' \\
