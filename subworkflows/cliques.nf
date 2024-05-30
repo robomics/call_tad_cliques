@@ -91,6 +91,7 @@ process PLOT_MAXIMAL_CLIQUE_SIZE {
         mode: params.publish_dir_mode
 
     label 'duration_very_short'
+    tag "$interaction_type"
 
     cpus 1
 
