@@ -1,0 +1,29 @@
+# Copyright (c) 2024 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build NCHG Dockerfile
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-nchg*dockerfile.yml"
+      - ".github/workflows/build-dockerfile.yml"
+      - "containers/nchg*.Dockerfile"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-nchg*dockerfile.yml"
+      - ".github/workflows/build-dockerfile.yml"
+      - "containers/nchg*.Dockerfile"
+
+jobs:
+  build-nchg-dockerfile:
+    name: Build NCHG Dockerfile
+    uses: robomics/call_tad_cliques/.github/workflows/build-dockerfile.yml@main
+    with:
+      dockerfile-glob: "containers/nchg*.Dockerfile"
+
+    permissions:
+      contents: read
+      packages: write
