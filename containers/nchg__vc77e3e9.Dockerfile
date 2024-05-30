@@ -15,7 +15,6 @@ RUN apt-get update \
 &&  apt-get install -y pigz procps zstd \
 && rm -rf /var/lib/apt/lists/*
 
-CMD ["/bin/bash"]
 ENTRYPOINT ["/bin/bash"]
 WORKDIR /data
 
