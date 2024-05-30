@@ -173,10 +173,9 @@ process MASK_DOMAINS {
 
 process COMPUTE {
     label 'process_long'
-    label 'process_very_high'
+    label 'process_high'
     tag "$sample"
 
-    cpus 16
 
     input:
         tuple val(sample),
