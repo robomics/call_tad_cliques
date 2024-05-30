@@ -151,7 +151,7 @@ jobs:
 
     strategy:
       matrix:
-        NXF_VER: [ "20.07", "latest-stable" ]
+        NXF_VER: [ "22.10.8", "latest-stable" ]
 
     steps:
       - name: Checkout repo
