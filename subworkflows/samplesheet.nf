@@ -33,7 +33,7 @@ workflow SAMPLESHEET {
         sample
         hic_file
         resolution
-        domains
+        tads
 
     main:
         if (sample_sheet) {
