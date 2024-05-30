@@ -6,7 +6,6 @@
 import argparse
 import pathlib
 import re
-import sys
 import warnings
 from typing import Tuple
 
