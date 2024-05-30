@@ -17,7 +17,6 @@ workflow TADS {
         sample_sheet
         hic_norm
         cool_norm
-        zstd_compression_lvl
 
     main:
 
@@ -51,13 +50,11 @@ workflow TADS {
         )
 
         HICEXPLORER_FIND_TADS(
-            APPLY_NORMALIZATION.out,
-            zstd_compression_lvl
+            APPLY_NORMALIZATION.out
         )
 
         COPY(
-            tasks.copy,
-            zstd_compression_lvl
+            tasks.copy
         )
 
     emit:
@@ -132,16 +129,16 @@ process HICEXPLORER_FIND_TADS {
         tuple val(id),
               path(cooler)
 
-        val zstd_compression_lvl
-
     output:
         tuple val(id),
-              path("*_tads.bed.zst"),
+              path("*_tads.bed.gz"),
         emit: bed
 
     shell:
         outprefix="${cooler.baseName}"
         '''
+        set -o pipefail
+
         NUMEXPR_MAX_THREADS='!{task.cpus}'
         export NUMEXPR_MAX_THREADS
 
@@ -150,11 +147,7 @@ process HICEXPLORER_FIND_TADS {
                     --outPrefix '!{outprefix}' \\
                     --correctForMultipleTesting fdr
 
-        zstd -T!{task.cpus} \\
-             -'!{zstd_compression_lvl}' \\
-             '!{outprefix}_domains.bed'
-
-        mv '!{outprefix}_domains.bed.zst' '!{outprefix}_tads.bed.zst'
+        pigz -9 -p !{task.cpus} < '!{outprefix}_domains.bed' > '!{outprefix}_tads.bed.gz'
         '''
 }
 
@@ -172,19 +165,17 @@ process COPY {
               val(resolution),
               path(tads)
 
-        val zstd_compression_lvl
-
     output:
         tuple val(id),
-              path("*_tads.bed.zst"),
+              path("*_tads.bed.gz"),
         emit: bed
 
     shell:
         outprefix="${file.baseName}"
         '''
+        set -o pipefail
+
         zcat -f '!{tads}' |
-        zstd -T!{task.cpus} \\
-             -'!{zstd_compression_lvl}' \\
-             > '!{outprefix}_tads.bed.zst'
+        pigz -9 -p !{task.cpus} > '!{outprefix}_tads.bed.gz'
         '''
 }
