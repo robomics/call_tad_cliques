@@ -1,0 +1,29 @@
+# Copyright (c) 2024 Roberto Rossini (roberros@uio.no)
+# SPDX-License-Identifier: MIT
+
+name: Build Python utils Dockerfile
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-py-utils*dockerfile.yml"
+      - ".github/workflows/build-dockerfile.yml"
+      - "containers/py-utils*.Dockerfile"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - ".github/workflows/build-py-utils*dockerfile.yml"
+      - ".github/workflows/build-dockerfile.yml"
+      - "containers/py-utils*.Dockerfile"
+
+jobs:
+  build-py-utils-dockerfile:
+    name: Build Python utils Dockerfile
+    uses: robomics/call_tad_cliques/.github/workflows/build-dockerfile.yml@main
+    with:
+      dockerfile-glob: "containers/py-utils*.Dockerfile"
+
+    permissions:
+      contents: read
+      packages: write
