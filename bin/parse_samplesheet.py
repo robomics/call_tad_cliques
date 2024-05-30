@@ -9,29 +9,10 @@ import sys
 from collections import namedtuple
 from typing import Tuple, Union
 
-import cooler
+import hictkpy
 import pandas as pd
 
-CoolerURI = namedtuple("CoolerURI", ["parent", "name", "suffix"])
-
-
-def parse_cooler_uri(uri) -> CoolerURI:
-    if "::" in uri:
-        path, _, suffix = uri.partition("::")
-    else:
-        path = uri
-        suffix = None
-
-    return CoolerURI(pathlib.Path(path).parent, pathlib.Path(path).name, suffix)
-
-
-def cooler_uri_basename(uri) -> str:
-    _, name, suffix = parse_cooler_uri(uri)
-
-    if suffix is None:
-        return name
-
-    return f"{name}::{suffix}"
+FileURI = namedtuple("FileURI", ["parent", "name", "suffix"])
 
 
 def make_cli() -> argparse.ArgumentParser:
@@ -52,6 +33,25 @@ def make_cli() -> argparse.ArgumentParser:
     )
 
     return cli
+
+
+def parse_file_uri(uri: str) -> FileURI:
+    if "::" in uri:
+        path, _, suffix = uri.partition("::")
+    else:
+        path = uri
+        suffix = None
+
+    return FileURI(pathlib.Path(path).parent, pathlib.Path(path).name, suffix)
+
+
+def file_uri_basename(uri: str) -> str:
+    _, name, suffix = parse_file_uri(uri)
+
+    if suffix is None:
+        return name
+
+    return f"{name}::{suffix}"
 
 
 def check_sample_ids(df: pd.DataFrame):
@@ -78,23 +78,22 @@ def check_column_is_integral(col: pd.Series, col_name: Union[str, None] = None):
         raise RuntimeError(f'column "{col_name}" contains invalid values (expected int, found {col.dtype})')
 
 
-def check_is_valid_cooler(path: pathlib.Path, strip_parent_dirs: bool = True):
+def check_is_valid_hic_file(path: pathlib.Path, resolution: int, strip_parent_dirs: bool = True):
     if strip_parent_dirs:
-        path = cooler_uri_basename(path)
+        path = file_uri_basename(str(path))
     try:
-        cooler.Cooler(str(path))
-    except KeyError:
-        raise RuntimeError(
-            f'file "{path}" seems to point to a .mcool file. '
-            f'Please specify the URI to a cooler file (e.g. "{path}::/resolutions/50000")'
-        )
+        f = hictkpy.File(str(path), resolution)
+        if f.resolution() != resolution:
+            raise RuntimeError(f'expected file "{path}" to have resolution {resolution}, but found {f.resolution()}')
     except OSError as e:
         raise RuntimeError(f'unable to open file "{path}": {e}')
+    except Exception as e:
+        raise RuntimeError(f'failed to validate file "{path}" at resolution {resolution}: {e}')
 
 
 def check_is_valid_bed3(path: pathlib.Path, strip_parent_dirs: bool = True):
     if strip_parent_dirs:
-        path = cooler_uri_basename(path)
+        path = file_uri_basename(str(path))
     try:
         df = pd.read_table(path, names=["chrom", "start", "end"], usecols=[0, 1, 2])
         if df.isnull().values.any():
@@ -109,23 +108,6 @@ def check_is_valid_bed3(path: pathlib.Path, strip_parent_dirs: bool = True):
         raise RuntimeError(f'validation failed for file "{path}": {e}')
 
 
-def parse_cooler_uris(cooler_uris) -> Tuple[list, list]:
-    paths = []
-    resolutions = []
-
-    for uri in cooler_uris:
-        if "::" in uri:
-            suffix = parse_cooler_uri(uri).suffix
-            resolution = suffix.removeprefix("/resolutions/")
-            resolutions.append(int(resolution))
-            paths.append(str(uri).partition("::")[0])
-        else:
-            resolutions.append(0)
-            paths.append(uri)
-
-    return paths, resolutions
-
-
 def main():
     df = pd.read_table(sample_sheet)
 
@@ -135,29 +117,25 @@ def main():
         raise RuntimeError(f"\nexpected columns:\n- {expected}\nfound:\n- {found}")
 
     check_sample_ids(df)
+    check_column_is_integral(df["resolution"])
 
     if not detached:
-        df["cooler_cis"].apply(check_is_valid_cooler)
-        df["cooler_trans"].apply(check_is_valid_cooler)
+        for _, row in df.iterrows():
+            check_is_valid_hic_file(row["hic_file"], row["resolution"])
 
         for path in df["tads"].fillna(""):
             if path != "":
                 check_is_valid_bed3(path)
 
-        paths, res = parse_cooler_uris(df["cooler_cis"])
+        paths = [uri.partition("::")[0] for uri in df["hic_file"]]
 
-        df["cooler_cis"] = paths
-        df["cis_resolution"] = res
-
-        paths, res = parse_cooler_uris(df["cooler_trans"])
-        df["cooler_trans"] = paths
-        df["trans_resolution"] = res
+        df["hic_file"] = paths
 
     df.to_csv(sys.stdout, sep="\t", index=False, header=True)
 
 
 if __name__ == "__main__":
-    EXPECTED_COLUMNS = tuple(["sample", "cooler_cis", "cooler_trans", "tads"])
+    EXPECTED_COLUMNS = tuple(["sample", "hic_file", "resolution", "tads"])
     args = vars(make_cli().parse_args())
     sample_sheet = args["tsv"]
     detached = args["detached"]
