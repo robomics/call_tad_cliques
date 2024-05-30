@@ -16,6 +16,7 @@ RUN apt-get update \
 && rm -rf /var/lib/apt/lists/*
 
 CMD ["/bin/bash"]
+ENTRYPOINT ["/bin/bash"]
 WORKDIR /data
 
 LABEL org.opencontainers.image.authors='Roberto Rossini <roberros@uio.no>'
