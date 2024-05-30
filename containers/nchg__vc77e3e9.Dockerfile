@@ -12,7 +12,7 @@ ARG CONTAINER_VERSION
 RUN if [ -z "$CONTAINER_VERSION" ]; then echo "Missing CONTAINER_VERSION --build-arg" && exit 1; fi
 
 RUN apt-get update \
-&&  apt-get install pigz procps zstd \
+&&  apt-get install -y pigz procps zstd \
 && rm -rf /var/lib/apt/lists/*
 
 CMD ["/usr/local/bin/NCHG"]
