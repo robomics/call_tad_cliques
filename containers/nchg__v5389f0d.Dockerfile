@@ -15,7 +15,8 @@ RUN apt-get update \
 &&  apt-get install -y pigz procps zstd \
 && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT ["/bin/bash"]
+
+ENTRYPOINT []
 WORKDIR /data
 
 LABEL org.opencontainers.image.authors='Roberto Rossini <roberros@uio.no>'
