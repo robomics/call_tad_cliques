@@ -198,6 +198,8 @@ process COMPUTE {
 
         zstdcat -f '!{domains}' > domains.bed
 
+        ls -lah
+
         NCHG compute \\
             '!{hic}' \\
             '!{sample}' \\
