@@ -198,8 +198,6 @@ process COMPUTE {
 
         zstdcat -f '!{domains}' > domains.bed
 
-        ls -lah
-
         NCHG compute \\
             '!{hic}' \\
             '!{sample}' \\
@@ -208,9 +206,6 @@ process COMPUTE {
             --mad-max='!{mad_max}' \\
             --bad-bin-fraction='!{bad_bin_fraction}' \\
             --threads='!{task.cpus}'
-
-        ls -lah
-        exit 1
         '''
 }
 
