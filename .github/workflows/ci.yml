@@ -61,6 +61,7 @@ jobs:
       with:
         key: ${{ steps.generate-cache-key.outputs.key }}
         path: data/
+        fail-on-cache-miss: true
 
     - name: Download test dataset
       if: steps.cache-dataset.outputs.cache-hit != 'true'
