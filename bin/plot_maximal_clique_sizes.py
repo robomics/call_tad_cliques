@@ -115,17 +115,19 @@ def plot_maximal_clique_sizes(cliques: Dict[str, pd.DataFrame], stat: str) -> pl
     for label, df in cliques.items():
         data.extend([[label, size] for size in df["size"]])
     df = pd.DataFrame(data, columns=["label", "size"])
-    sns.histplot(
-        df,
-        x="size",
-        hue="label",
-        multiple="dodge",
-        ax=ax,
-        shrink=0.8,
-        discrete=True,
-        stat=stat,
-        common_norm=False,
-    )
+
+    if len(df) > 0:
+        sns.histplot(
+            df,
+            x="size",
+            hue="label",
+            multiple="dodge",
+            ax=ax,
+            shrink=0.8,
+            discrete=True,
+            stat=stat,
+            common_norm=False,
+        )
 
     return fig
 
