@@ -4,7 +4,7 @@
 
 ARG CONTAINER_VERSION
 
-FROM ghcr.io/paulsengroup/nchg:sha-c77e3e9 AS base
+FROM ghcr.io/paulsengroup/nchg:sha-5389f0d AS base
 
 ARG CONTAINER_TITLE
 ARG CONTAINER_VERSION
