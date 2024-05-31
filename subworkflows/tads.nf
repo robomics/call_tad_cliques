@@ -110,10 +110,14 @@ process APPLY_NORMALIZATION {
     shell:
         outname="${id}.cool"
         '''
+        mkdir tmp/
+
+        TMPDIR="$PWD/tmp" \\
         apply_normalization.py '!{file}' \\
                                '!{outname}' \\
                                --norm-name='!{normalization}' \\
-                               --resolution='!{resolution}'
+                               --resolution='!{resolution}' \\
+                               --cis-only
         '''
 }
 
