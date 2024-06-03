@@ -86,7 +86,7 @@ process CALL {
 }
 
 process PLOT_MAXIMAL_CLIQUE_SIZE {
-    publishDir "${params.publish_dir}/plots",
+    publishDir "${params.publish_dir}/plots/cliques",
         enabled: !!params.publish_dir,
         mode: params.publish_dir_mode
 
