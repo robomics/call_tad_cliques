@@ -458,6 +458,8 @@ process GET_HIC_PLOT_RESOLUTION {
                 if delta1 < delta2:
                     best_res = res
 
+        except RuntimeError:
+            pass
         finally:
             print(f"!{sample}\\t{best_res}")
         '''
