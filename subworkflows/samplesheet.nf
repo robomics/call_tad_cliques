@@ -63,7 +63,7 @@ workflow SAMPLESHEET {
             .splitCsv(sep: "\t", header: true)
             .map {
                     it = parse_sample_sheet_row(it)
-                    it[1] + it[4]  // Concatenate path to coolers and tads (when available)
+                    it[1] + it[2]  // Concatenate path to coolers and tads (when available)
             }
             .flatten()
             .unique()
