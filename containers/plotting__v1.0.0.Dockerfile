@@ -11,8 +11,12 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN micromamba install -y \
         -c conda-forge \
         -c bioconda \
-        'python>=3.12' \
+        'python>=3.10' \
+        'h5py=3.11.*' \
+        'hictkpy=0.0.5' \
         'matplotlib=3.8.*' \
+        'numpy=1.26.*' \
+        'pyarrow=16.*' \
         'seaborn=0.13.*' \
         procps-ng \
 && micromamba clean --all -y

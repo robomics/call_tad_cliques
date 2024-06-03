@@ -59,25 +59,75 @@ workflow NCHG {
             bad_bin_fraction
         )
 
-       MERGE(
+        MERGE(
             COMPUTE.out.parquet
-       )
+        )
 
-       FILTER(
+        FILTER(
             MERGE.out.parquet,
             fdr,
             log_ratio
-       )
+        )
 
-       VIEW(
-           FILTER.out.parquet
-       )
+        VIEW(
+            FILTER.out.parquet
+        )
+
+        if (!params.skip_expected_plots) {
+            EXPECTED(
+                nchg_tasks,
+                mad_max,
+                bad_bin_fraction
+            )
+
+            PLOT_EXPECTED(
+                EXPECTED.out.h5
+            )
+        }
+
+        if (!params.skip_sign_interaction_plots) {
+            GENERATE_CHROMOSOME_PAIRS(
+                nchg_tasks
+            )
+
+            GET_HIC_PLOT_RESOLUTION(
+                nchg_tasks,
+                params.hic_tgt_resolution_plots
+            )
+
+            GET_HIC_PLOT_RESOLUTION.out.tsv
+                .splitCsv(header: ["sample", "resolution"],
+                          sep: "\t")
+                .map { tuple(it.sample, it.resolution) }
+                .set { plotting_resolutions }
+
+            GENERATE_CHROMOSOME_PAIRS.out.tsv
+                .splitCsv(header: ["sample", "chrom1", "chrom2"],
+                          sep: "\t")
+                .map { tuple(it.sample, it.chrom1, it.chrom2) }
+                .set { chrom_pairs }
+
+            sample_sheet
+                .splitCsv(sep: "\t", header: true)
+                .map { row -> tuple(row.sample,
+                                    file(row.hic_file, checkIfExists: true))
+                }
+                .join(plotting_resolutions)
+                .join(FILTER.out.parquet)
+                .join(chrom_pairs.groupTuple())
+                .set { plotting_tasks }
+
+            PLOT_SIGNIFICANT(
+               plotting_tasks,
+               params.plot_sig_interactions_cmap_lb,
+               params.plot_sig_interactions_cmap_ub
+            )
+        }
 
     emit:
         tsv = VIEW.out.tsv
 
 }
-
 
 process GENERATE_MASK {
     label 'duration_very_short'
@@ -169,7 +219,6 @@ process MASK_DOMAINS {
                  -o '!{outname}'
         '''
 }
-
 
 process COMPUTE {
     label 'process_long'
@@ -283,5 +332,190 @@ process VIEW {
 
         NCHG view '!{parquet}' |
             pigz -9 -p !{task.cpus} > '!{sample}.filtered.tsv.gz'
+        '''
+}
+
+process EXPECTED {
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution),
+              path(domains)
+
+        val mad_max
+        val bad_bin_fraction
+
+    output:
+        tuple val(sample),
+              path("*.h5"),
+        emit: h5
+
+    shell:
+        '''
+        NCHG expected \\
+            '!{hic}' \\
+            --output='!{sample}.h5' \\
+            --resolution='!{resolution}' \\
+            --mad-max='!{mad_max}'
+        '''
+}
+
+process PLOT_EXPECTED {
+    publishDir "${params.publish_dir}/plots/nchg/${sample}",
+        enabled: !!params.publish_dir,
+        mode: params.publish_dir_mode
+
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(h5)
+
+    output:
+        tuple val(sample),
+              path("*.${params.plot_format}")
+
+    shell:
+        '''
+        plot_nchg_expected_values.py \\
+            '!{h5}' \\
+            '!{sample}_cis.!{params.plot_format}' \\
+            --yscale-log \\
+            --plot-cis
+
+        plot_nchg_expected_values.py \\
+            '!{h5}' \\
+            '!{sample}_trans.!{params.plot_format}' \\
+            --plot-trans
+        '''
+}
+
+process GENERATE_CHROMOSOME_PAIRS {
+    label 'process_very_short'
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution),
+              path(domains)
+
+    output:
+        stdout emit: tsv
+
+    shell:
+        '''
+        #!/usr/bin/env python3
+
+        import hictkpy
+
+        chroms = list(
+            hictkpy.File("!{hic}", int("!{resolution}")).chromosomes().keys()
+        )
+
+        sample='!{sample}'
+
+        for i, chrom1 in enumerate(chroms):
+            for chrom2 in chroms[i:]:
+                print(f"{sample}\\t{chrom1}\\t{chrom2}")
+        '''
+}
+
+process GET_HIC_PLOT_RESOLUTION {
+    label 'process_very_short'
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution),
+              path(domains)
+
+        val tgt_resolution
+
+    output:
+        stdout emit: tsv
+
+    shell:
+        '''
+        #!/usr/bin/env python3
+
+        import hictkpy
+
+        best_res = int("!{resolution}")
+
+        try:
+            resolutions = hictkpy.MultiResFile("!{hic}").resolutions()
+
+            tgt_res = int("!{tgt_resolution}")
+
+            for res in resolutions:
+                delta1 = abs(res - tgt_res)
+                delta2 = abs(best_res - tgt_res)
+
+                if delta1 < delta2:
+                    best_res = res
+
+        finally:
+            print(f"!{sample}\\t{best_res}")
+        '''
+}
+
+process PLOT_SIGNIFICANT {
+    publishDir "${params.publish_dir}/plots/nchg/${sample}",
+        enabled: !!params.publish_dir,
+        mode: params.publish_dir_mode
+
+    label 'process_high'
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution),
+              path(parquet),
+              val(chroms1),
+              val(chroms2)
+
+        val cmap_lb
+        val cmap_ub
+
+    output:
+        tuple val(sample),
+              path("*.${params.plot_format}")
+
+    shell:
+        chroms1_str=chroms1.join(" ")
+        chroms2_str=chroms2.join(" ")
+        '''
+        chroms1=(!{chroms1_str})
+        chroms2=(!{chroms2_str})
+
+        commands=()
+        for i in "${!chroms1[@]}"; do
+            chrom1="${chroms1[$i]}"
+            chrom2="${chroms2[$i]}"
+
+            outname="!{sample}.$chrom1.$chrom2.!{params.plot_format}"
+
+            command=(
+                plot_significant_interactions.py \\
+                    '!{hic}' \\
+                    '!{parquet}' \\
+                    "$chrom1" \\
+                    "$chrom2" \\
+                    "$outname" \\
+                    --resolution='!{resolution}' \\
+                    --min-value='!{cmap_lb}' \\
+                    --max-value='!{cmap_ub}'
+            )
+
+            commands+=("${command[*]}")
+        done
+
+        printf '%s\\0' "${commands[@]}" |
+            xargs -0 -I '{}' -P '!{task.cpus}' bash -c '{}'
         '''
 }
