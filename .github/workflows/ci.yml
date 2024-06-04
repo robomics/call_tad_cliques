@@ -61,7 +61,6 @@ jobs:
       with:
         key: ${{ steps.generate-cache-key.outputs.key }}
         path: data/
-        fail-on-cache-miss: true
 
     - name: Download test dataset
       if: steps.cache-dataset.outputs.cache-hit != 'true'
@@ -119,6 +118,7 @@ jobs:
         with:
           key: ${{ needs.preproc-test-dataset.outputs.cache-key }}
           path: data/
+          fail-on-cache-miss: true
 
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@v2
