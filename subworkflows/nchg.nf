@@ -231,7 +231,7 @@ process MASK_DOMAINS {
 
 process COMPUTE {
     label 'process_long'
-    label 'process_high'
+    label 'process_very_high'
     tag "$sample"
 
 
@@ -479,7 +479,7 @@ process PLOT_SIGNIFICANT {
         enabled: !!params.publish_dir,
         mode: params.publish_dir_mode
 
-    label 'process_high'
+    label 'process_very_high'
     tag "$sample"
 
     input:
