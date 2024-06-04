@@ -117,10 +117,19 @@ workflow NCHG {
                 .join(chrom_pairs.groupTuple())
                 .set { plotting_tasks }
 
+            if (!params.plot_sig_interactions_cmap_lb) {
+                plot_sig_interactions_cmap_lb = params.nchg_log_ratio
+            } else {
+                plot_sig_interactions_cmap_lb = params.plot_sig_interactions_cmap_lb
+            }
+
+            plot_sig_interactions_cmap_ub = Math.max(plot_sig_interactions_cmap_lb,
+                                                     params.plot_sig_interactions_cmap_ub)
+
             PLOT_SIGNIFICANT(
                plotting_tasks,
-               params.plot_sig_interactions_cmap_lb,
-               params.plot_sig_interactions_cmap_ub
+               plot_sig_interactions_cmap_lb,
+               plot_sig_interactions_cmap_ub
             )
         }
 
