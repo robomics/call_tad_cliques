@@ -130,11 +130,11 @@ jobs:
           nextflow run -c config/test.config \
                        --sample="test" \
                        --hic_file="data/$(basename "$TEST_DATASET_URL")" \
-                       --resolution=1000000 \
+                       --resolution=100000 \
                        --outdir=data/out \
                        --max_cpus=$(nproc) \
                        --max_memory=6.GB \
                        --max_time=2.h \
                        .
 
-          ls -lah data/out/cliques/test_{all,cis,trans}_{cliques,domains}*.gz
+          ls -lah data/out/cliques/test_cis_{cliques,domains}*.gz
