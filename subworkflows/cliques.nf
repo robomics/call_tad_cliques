@@ -50,9 +50,6 @@ process CALL {
         mode: params.publish_dir_mode
     tag "$id"
 
-
-    label 'duration_short'
-
     cpus 1
 
     input:
