@@ -42,26 +42,60 @@ workflow NCHG {
 
         MASK_DOMAINS.out.set { filtered_domains }
 
+        interaction_types = []
+        if (params.call_cis_cliques) {
+            interaction_types.add("cis")
+        }
+        if (params.call_trans_cliques) {
+            interaction_types.add("trans")
+        }
+
         sample_sheet
             .splitCsv(sep: "\t", header: true)
             .map { row -> tuple(row.sample,
                                 file(row.hic_file, checkIfExists: true),
                                 row.resolution)
             }
-            .join(filtered_domains,
-                  failOnDuplicate: true,
-                  failOnMismatch: true)
-            .set { nchg_tasks }
+            .set { hic_files }
+
+
+        EXPECTED(
+            hic_files,
+            interaction_types,
+            mad_max
+        )
+
+        GENERATE_CHROMOSOME_PAIRS(
+            hic_files.combine(interaction_types)
+        )
+
+        DUMP_CHROM_SIZES(
+            hic_files
+        )
+
+        GENERATE_CHROMOSOME_PAIRS.out
+            .splitCsv(sep: "\t", header: ["sample", "chrom1", "chrom2"])
+            .map { tuple(it.sample, it.chrom1, it.chrom2) }
+            .combine(hic_files, by: 0)
+            .combine(filtered_domains, by: 0)
+            .combine(EXPECTED.out.h5, by: 0)
+            .set { nchg_compute_tasks }
 
         COMPUTE(
-            nchg_tasks,
-            mad_max,
-            bad_bin_fraction
+            nchg_compute_tasks,
+            bad_bin_fraction,
         )
 
+        COMPUTE.out.parquet
+            .map { tuple(it[0], it[3]) }
+            .groupTuple()
+            .join(DUMP_CHROM_SIZES.out.tsv)
+            .set { nchg_merge_tasks }
+
         MERGE(
-            COMPUTE.out.parquet
+            nchg_merge_tasks
         )
+
 
         FILTER(
             MERGE.out.parquet,
@@ -74,24 +108,15 @@ workflow NCHG {
         )
 
         if (!params.skip_expected_plots) {
-            EXPECTED(
-                nchg_tasks,
-                mad_max,
-                bad_bin_fraction
-            )
-
             PLOT_EXPECTED(
-                EXPECTED.out.h5
+                EXPECTED.out.h5,
+                interaction_types
             )
         }
 
         if (!params.skip_sign_interaction_plots) {
-            GENERATE_CHROMOSOME_PAIRS(
-                nchg_tasks
-            )
-
             GET_HIC_PLOT_RESOLUTION(
-                nchg_tasks,
+                hic_files,
                 params.hic_tgt_resolution_plots
             )
 
@@ -107,11 +132,16 @@ workflow NCHG {
                 .map { tuple(it.sample, it.chrom1, it.chrom2) }
                 .set { chrom_pairs }
 
-            sample_sheet
-                .splitCsv(sep: "\t", header: true)
-                .map { row -> tuple(row.sample,
-                                    file(row.hic_file, checkIfExists: true))
-                }
+            interaction_types = []
+            if (params.call_cis_cliques) {
+                interaction_types.push("cis")
+            }
+            if (params.call_trans_cliques) {
+                interaction_types.push("trans")
+            }
+
+            hic_files
+                .map { tuple(it[0], it[1]) }
                 .join(plotting_resolutions)
                 .join(FILTER.out.parquet)
                 .join(chrom_pairs.groupTuple())
@@ -229,28 +259,139 @@ process MASK_DOMAINS {
         '''
 }
 
-process COMPUTE {
-    label 'process_long'
-    label 'process_very_high'
+
+process DUMP_CHROM_SIZES {
+    label 'process_very_short'
     tag "$sample"
 
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution)
+
+    output:
+        tuple val(sample),
+              path("*.chrom.sizes"),
+        emit: tsv
+
+    shell:
+        '''
+        #!/usr/bin/env python3
+
+        import hictkpy
+
+        chroms = hictkpy.File("!{hic}", int("!{resolution}")).chromosomes()
+
+        with open("!{sample}.chrom.sizes", "w") as f:
+            for chrom, size in chroms.items():
+                print(f"{chrom}\\t{size}", file=f)
+        '''
+}
+
+process GENERATE_CHROMOSOME_PAIRS {
+    label 'process_very_short'
+    tag "$sample"
 
     input:
         tuple val(sample),
               path(hic),
               val(resolution),
-              path(domains)
+              val(interaction_type)
 
+    output:
+        stdout emit: tsv
+
+    shell:
+        '''
+        #!/usr/bin/env python3
+
+        import hictkpy
+
+        chroms = list(
+            hictkpy.File("!{hic}", int("!{resolution}")).chromosomes().keys()
+        )
+
+        sample = "!{sample}"
+        interaction_type = "!{interaction_type}"
+
+        for i, chrom1 in enumerate(chroms):
+            for chrom2 in chroms[i:]:
+                do_print = interaction_type == "cis" and chrom1 == chrom2
+                do_print |= interaction_type == "trans" and chrom1 != chrom2
+
+                if do_print:
+                    print(f"{sample}\\t{chrom1}\\t{chrom2}")
+        '''
+}
+
+// TODO optimize: trans expected values can be computed in parallel
+process EXPECTED {
+    tag "$sample"
+
+    input:
+        tuple val(sample),
+              path(hic),
+              val(resolution)
+
+        val interaction_types
         val mad_max
+
+    output:
+        tuple val(sample),
+              path(outname),
+        emit: h5
+
+    shell:
+        opts=[
+            "--resolution='${resolution}'",
+            "--mad-max='${mad_max}'"
+        ]
+
+        suffix=""
+        if (interaction_types.size() == 1) {
+            if ("cis" in interaction_types) {
+                opts.push("--cis-only")
+                suffix=".cis"
+            } else if ("trans" in interaction_types) {
+                opts.push("--trans-only")
+                suffix=".trans"
+            }
+        }
+
+        outname="${sample}${suffix}.h5"
+        opts=opts.join(" ")
+        '''
+        NCHG expected \\
+            '!{hic}' \\
+            --output='!{outname}' \\
+            !{opts}
+        '''
+}
+
+process COMPUTE{
+    tag "$sample ($chrom1:$chrom2)"
+
+
+    input:
+        tuple val(sample),
+              val(chrom1),
+              val(chrom2),
+              path(hic),
+              val(resolution),
+              path(domains),
+              path(expected_values)
+
         val bad_bin_fraction
 
     output:
         tuple val(sample),
-              path("*.chrom.sizes"),
-              path("*.parquet"),
+              val(chrom1),
+              val(chrom2),
+              path("*.parquet", optional: true),
         emit: parquet
 
     shell:
+        outname="${sample}.${chrom1}.${chrom2}.parquet"
         '''
         set -o pipefail
 
@@ -258,12 +399,13 @@ process COMPUTE {
 
         NCHG compute \\
             '!{hic}' \\
-            '!{sample}' \\
+            '!{outname}' \\
             --resolution='!{resolution}' \\
+            --chrom1='!{chrom1}' \\
+            --chrom2='!{chrom2}' \\
+            --expected-values='!{expected_values}' \\
             --domains=domains.bed \\
-            --mad-max='!{mad_max}' \\
-            --bad-bin-fraction='!{bad_bin_fraction}' \\
-            --threads='!{task.cpus}'
+            --bad-bin-fraction='!{bad_bin_fraction}'
         '''
 }
 
@@ -274,8 +416,8 @@ process MERGE {
 
     input:
         tuple val(sample),
-              path(chrom_sizes),
-              path(parquets)
+              path(parquets),
+              path(chrom_sizes)
 
     output:
         tuple val(sample),
@@ -283,9 +425,10 @@ process MERGE {
         emit: parquet
 
     shell:
+        input_prefix="${sample}"
         outname="${sample}.parquet"
         '''
-        NCHG merge '!{sample}' '!{outname}' \\
+        NCHG merge '!{input_prefix}' '!{outname}' \\
             --threads='!{task.cpus}'
         '''
 }
@@ -304,14 +447,15 @@ process FILTER {
 
     output:
         tuple val(sample),
-              path("*.parquet"),
+              path(outname),
         emit: parquet
 
     shell:
+        outname="${sample}.filtered.parquet"
         '''
         NCHG filter \\
             '!{parquet}' \\
-            '!{sample}.filtered.parquet' \\
+            '!{outname}' \\
             --fdr='!{fdr}' \\
             --log-ratio='!{log_ratio}' \\
             --threads='!{task.cpus}'
@@ -332,42 +476,16 @@ process VIEW {
 
     output:
         tuple val(sample),
-              path("*.tsv.gz"),
+              path(outname),
         emit: tsv
 
     shell:
+        outname="${sample}.filtered.tsv.gz"
         '''
         set -o pipefail
 
         NCHG view '!{parquet}' |
-            pigz -9 -p !{task.cpus} > '!{sample}.filtered.tsv.gz'
-        '''
-}
-
-process EXPECTED {
-    tag "$sample"
-
-    input:
-        tuple val(sample),
-              path(hic),
-              val(resolution),
-              path(domains)
-
-        val mad_max
-        val bad_bin_fraction
-
-    output:
-        tuple val(sample),
-              path("*.h5"),
-        emit: h5
-
-    shell:
-        '''
-        NCHG expected \\
-            '!{hic}' \\
-            --output='!{sample}.h5' \\
-            --resolution='!{resolution}' \\
-            --mad-max='!{mad_max}'
+            pigz -9 -p !{task.cpus} > '!{outname}'
         '''
 }
 
@@ -382,53 +500,30 @@ process PLOT_EXPECTED {
         tuple val(sample),
               path(h5)
 
+        val interaction_types
+
     output:
         tuple val(sample),
               path("*.${params.plot_format}")
 
     shell:
+        plot_cis="cis" in interaction_types
+        plot_trans="trans" in interaction_types
         '''
-        plot_nchg_expected_values.py \\
-            '!{h5}' \\
-            '!{sample}_cis.!{params.plot_format}' \\
-            --yscale-log \\
-            --plot-cis
+        if [[ !{plot_cis} == true ]]; then
+            plot_nchg_expected_values.py \\
+                '!{h5}' \\
+                '!{sample}_cis.!{params.plot_format}' \\
+                --yscale-log \\
+                --plot-cis
+        fi
 
-        plot_nchg_expected_values.py \\
-            '!{h5}' \\
-            '!{sample}_trans.!{params.plot_format}' \\
-            --plot-trans
-        '''
-}
-
-process GENERATE_CHROMOSOME_PAIRS {
-    label 'process_very_short'
-    tag "$sample"
-
-    input:
-        tuple val(sample),
-              path(hic),
-              val(resolution),
-              path(domains)
-
-    output:
-        stdout emit: tsv
-
-    shell:
-        '''
-        #!/usr/bin/env python3
-
-        import hictkpy
-
-        chroms = list(
-            hictkpy.File("!{hic}", int("!{resolution}")).chromosomes().keys()
-        )
-
-        sample='!{sample}'
-
-        for i, chrom1 in enumerate(chroms):
-            for chrom2 in chroms[i:]:
-                print(f"{sample}\\t{chrom1}\\t{chrom2}")
+        if [[ !{plot_trans} == true ]]; then
+            plot_nchg_expected_values.py \\
+                '!{h5}' \\
+                '!{sample}_trans.!{params.plot_format}' \\
+                --plot-trans
+        fi
         '''
 }
 
@@ -439,8 +534,7 @@ process GET_HIC_PLOT_RESOLUTION {
     input:
         tuple val(sample),
               path(hic),
-              val(resolution),
-              path(domains)
+              val(resolution)
 
         val tgt_resolution
 

@@ -53,7 +53,7 @@ workflow {
         params.custom_mask,
     )
 
-     CLIQUES(
+    CLIQUES(
         NCHG.out.tsv,
         TADS.out.tsv,
         params.clique_size_thresh

@@ -20,7 +20,13 @@ workflow CLIQUES {
 
     main:
 
-        interaction_types = ["cis-only", "trans-only", "all"]
+        interaction_types = []
+        if (params.call_cis_cliques) {
+            interaction_types.add("cis")
+        }
+        if (params.call_trans_cliques) {
+            interaction_types.add("trans")
+        }
 
         significant_interactions
             .join(tads)
@@ -68,14 +74,13 @@ process CALL {
         emit: cliques
 
     shell:
-        suffix=interaction_type.replaceAll('-', '_').replaceAll('_only', '')
-        outprefix="${id}_${suffix}"
+        outprefix="${id}_${interaction_type}"
         '''
-        call_cliques.py                                \\
-            '!{tads}'                                  \\
-            '!{significant_interactions}'              \\
-            '!{outprefix}'                             \\
-            --interaction-type='!{interaction_type}'   \\
+        call_cliques.py \\
+            '!{tads}' \\
+            '!{significant_interactions}' \\
+            '!{outprefix}' \\
+            --interaction-type='!{interaction_type}-only' \\
             --clique-size-threshold=!{min_clique_size}
 
         gzip -9 *.{bed,tsv}
