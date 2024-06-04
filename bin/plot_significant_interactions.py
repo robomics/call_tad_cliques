@@ -3,7 +3,6 @@
 # Copyright (C) 2024 Roberto Rossini <roberros@uio.no>
 # SPDX-License-Identifier: MIT
 
-
 import argparse
 import pathlib
 from typing import Tuple
@@ -13,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import pyarrow
 from matplotlib.colors import LogNorm
 
 
@@ -28,7 +28,7 @@ def make_cli():
     cli.add_argument(
         "parquet",
         type=pathlib.Path,
-        help="Path to the .parquet file produced by NCHG filter.",
+        help="Path to the .parquet or TSV file produced by either NCHG filter or NCHG view.",
     )
 
     cli.add_argument("chrom1", type=str, help="Name of the first chromosome.")
@@ -85,7 +85,11 @@ def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def import_data(path: str, chrom1: str, chrom2: str) -> pd.DataFrame:
-    df = preprocess_data(pd.read_parquet(path))
+    try:
+        df = pd.read_parquet(path)
+    except pyarrow.lib.ArrowInvalid:
+        df = pd.read_table(path)
+    df = preprocess_data(df)
     return df[(df["chrom1"] == chrom1) & (df["chrom2"] == chrom2)]
 
 

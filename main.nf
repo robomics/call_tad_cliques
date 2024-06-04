@@ -46,8 +46,6 @@ workflow {
         TADS.out.tsv,
         params.nchg_mad_max,
         params.nchg_bad_bin_fraction,
-        params.nchg_fdr,
-        params.nchg_log_ratio,
         params.cytoband,
         params.assembly_gaps,
         params.custom_mask,

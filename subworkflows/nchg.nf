@@ -18,9 +18,6 @@ workflow NCHG {
         mad_max
         bad_bin_fraction
 
-        fdr
-        log_ratio
-
         cytoband
         gaps
         custom_mask
@@ -87,9 +84,28 @@ workflow NCHG {
         )
 
         COMPUTE.out.parquet
+            .branch {
+                cis: it[1] == it[2]
+                trans: true
+            }
+            .set { significant_interactions }
+
+        significant_interactions.cis
             .map { tuple(it[0], it[3]) }
             .groupTuple()
+            .combine(["cis"])
             .join(DUMP_CHROM_SIZES.out.tsv)
+            .set { nchg_merge_cis_tasks }
+
+        significant_interactions.trans
+            .map { tuple(it[0], it[3]) }
+            .groupTuple()
+            .combine(["trans"])
+            .join(DUMP_CHROM_SIZES.out.tsv)
+            .set { nchg_merge_trans_tasks }
+
+        nchg_merge_cis_tasks
+            .mix(nchg_merge_trans_tasks)
             .set { nchg_merge_tasks }
 
         MERGE(
@@ -97,14 +113,45 @@ workflow NCHG {
         )
 
 
+        MERGE.out.parquet
+            .branch {
+                cis: it[1] == "cis"
+                trans: true
+            }
+            .set { nchg_merge_output }
+
+        nchg_merge_output.cis
+            .map { tuple(it[0],
+                         it[1],
+                         it[2],
+                         params.nchg_fdr_cis,
+                         params.nchg_log_ratio_cis)
+            }
+            .set { nchg_filter_cis_tasks }
+
+        nchg_merge_output.trans
+            .map { tuple(it[0],
+                         it[1],
+                         it[2],
+                         params.nchg_fdr_trans,
+                         params.nchg_log_ratio_trans)
+            }
+            .set { nchg_filter_trans_tasks }
+
+        nchg_filter_cis_tasks
+            .mix(nchg_filter_trans_tasks)
+            .set { nchg_filter_tasks }
+
         FILTER(
-            MERGE.out.parquet,
-            fdr,
-            log_ratio
+            nchg_filter_tasks
         )
 
         VIEW(
             FILTER.out.parquet
+        )
+
+        CONCAT(
+            VIEW.out.groupTuple()
         )
 
         if (!params.skip_expected_plots) {
@@ -143,12 +190,13 @@ workflow NCHG {
             hic_files
                 .map { tuple(it[0], it[1]) }
                 .join(plotting_resolutions)
-                .join(FILTER.out.parquet)
+                .join(CONCAT.out.tsv)
                 .join(chrom_pairs.groupTuple())
                 .set { plotting_tasks }
 
             if (!params.plot_sig_interactions_cmap_lb) {
-                plot_sig_interactions_cmap_lb = params.nchg_log_ratio
+                plot_sig_interactions_cmap_lb = Math.min(params.nchg_log_ratio_cis,
+                                                         params.nchg_log_ratio_trans)
             } else {
                 plot_sig_interactions_cmap_lb = params.plot_sig_interactions_cmap_lb
             }
@@ -164,7 +212,7 @@ workflow NCHG {
         }
 
     emit:
-        tsv = VIEW.out.tsv
+        tsv = CONCAT.out.tsv
 
 }
 
@@ -410,23 +458,25 @@ process COMPUTE{
 }
 
 process MERGE {
-    tag "$sample"
+    tag "$sample ($interaction_type)"
 
     cpus 2
 
     input:
         tuple val(sample),
               path(parquets),
+              val(interaction_type),
               path(chrom_sizes)
 
     output:
         tuple val(sample),
+              val(interaction_type),
               path(outname),
         emit: parquet
 
     shell:
         input_prefix="${sample}"
-        outname="${sample}.parquet"
+        outname="${sample}.${interaction_type}.parquet"
         '''
         NCHG merge '!{input_prefix}' '!{outname}' \\
             --threads='!{task.cpus}'
@@ -434,24 +484,25 @@ process MERGE {
 }
 
 process FILTER {
-    tag "$sample"
+    tag "$sample ($interaction_type)"
 
     cpus 2
 
     input:
         tuple val(sample),
-              path(parquet)
-
-        val fdr
-        val log_ratio
+              val(interaction_type),
+              path(parquet),
+              val(fdr),
+              val(log_ratio)
 
     output:
         tuple val(sample),
+              val(interaction_type),
               path(outname),
         emit: parquet
 
     shell:
-        outname="${sample}.filtered.parquet"
+        outname="${sample}.${interaction_type}.filtered.parquet"
         '''
         NCHG filter \\
             '!{parquet}' \\
@@ -463,16 +514,40 @@ process FILTER {
 }
 
 process VIEW {
+    tag "$sample ($interaction_type)"
+
+    input:
+        tuple val(sample),
+              val(interaction_type),
+              path(parquet)
+
+    output:
+        tuple val(sample),
+              val(interaction_type),
+              path(outname),
+        emit: tsv
+
+    shell:
+        outname="${sample}.${interaction_type}.filtered.tsv.gz"
+        '''
+        set -o pipefail
+
+        NCHG view '!{parquet}' |
+            pigz -9 -p !{task.cpus} > '!{outname}'
+        '''
+}
+
+process CONCAT {
     publishDir "${params.publish_dir}/nchg/",
         enabled: !!params.publish_dir,
         mode: params.publish_dir_mode
 
-    label 'process_medium'
     tag "$sample"
 
     input:
         tuple val(sample),
-              path(parquet)
+              val(interaction_types),
+              path(tsvs)
 
     output:
         tuple val(sample),
@@ -481,11 +556,20 @@ process VIEW {
 
     shell:
         outname="${sample}.filtered.tsv.gz"
+        tsvs_str=tsvs.join(" ")
         '''
-        set -o pipefail
 
-        NCHG view '!{parquet}' |
-            pigz -9 -p !{task.cpus} > '!{outname}'
+        # Write the file header
+        zcat '!{tsvs[0]}' |
+            head -n 1 |
+            pigz -9 > '!{outname}'
+
+        for f in !{tsvs_str}; do
+            # Skip file headers
+            zcat "$f" | tail -n +2
+        done |
+            sort -k1,1V -k2,2n -k4,4V -k5,5n |
+            pigz -9 -p !{task.cpus} >> '!{outname}'
         '''
 }
 
