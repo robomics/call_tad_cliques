@@ -155,8 +155,8 @@ def preprocess_data(domains: pd.DataFrame, interactions: pd.DataFrame) -> Tuple[
 
         res.setdefault(row.chrom, []).append(bead)
 
-    for beads in res.values():
-        beads.sort()
+    for beads_ in res.values():
+        beads_.sort()
 
     interacting_beads = {Interaction3D(id2bead[id1], id2bead[id2]) for id1, id2 in idpairs}
 
