@@ -43,7 +43,11 @@ workflow CLIQUES {
             .groupTuple()
             .set { cliques }
 
-        PLOT_MAXIMAL_CLIQUE_SIZE(
+        PLOT_MAXIMAL_CLIQUE_SIZE_DISTRIBUTION_BY_TAD(
+            cliques
+        )
+
+        PLOT_CLIQUE_SIZE_DISTRIBUTION(
             cliques
         )
 
@@ -87,7 +91,41 @@ process CALL {
         '''
 }
 
-process PLOT_MAXIMAL_CLIQUE_SIZE {
+process PLOT_MAXIMAL_CLIQUE_SIZE_DISTRIBUTION_BY_TAD {
+    publishDir "${params.publish_dir}/plots/cliques",
+        enabled: !!params.publish_dir,
+        mode: params.publish_dir_mode
+
+    label 'duration_very_short'
+    tag "$interaction_type"
+
+    cpus 1
+
+    input:
+        tuple val(interaction_type),
+              path(cliques)
+
+    output:
+        tuple val(interaction_type),
+              path("*.png"), emit: png
+
+        tuple val(interaction_type),
+              path("*.svg"), emit: svg
+
+    shell:
+        '''
+        plot_tad_maximal_clique_size_distribution.py \\
+            *_cliques.tsv.gz \\
+            -o '!{interaction_type}_tad_max_clique_size_distribution_abs'
+
+        plot_tad_maximal_clique_size_distribution.py \\
+            *_cliques.tsv.gz \\
+            --stat='density' \\
+            -o '!{interaction_type}_tad_max_clique_size_distribution_rel'
+        '''
+}
+
+process PLOT_CLIQUE_SIZE_DISTRIBUTION {
     publishDir "${params.publish_dir}/plots/cliques",
         enabled: !!params.publish_dir,
         mode: params.publish_dir_mode
@@ -111,12 +149,12 @@ process PLOT_MAXIMAL_CLIQUE_SIZE {
     shell:
         '''
         plot_maximal_clique_sizes.py \\
-            *_cliques.tsv.gz         \\
-            -o '!{interaction_type}_maximal_clique_size_abs'
+            *_cliques.tsv.gz \\
+            -o '!{interaction_type}_clique_size_distribution_abs'
 
         plot_maximal_clique_sizes.py \\
-            *_cliques.tsv.gz         \\
-            --stat='density'         \\
-            -o '!{interaction_type}_maximal_clique_size_rel'
+            *_cliques.tsv.gz \\
+            --stat='density' \\
+            -o '!{interaction_type}_clique_size_distribution_rel'
         '''
 }
