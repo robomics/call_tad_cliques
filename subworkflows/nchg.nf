@@ -374,6 +374,9 @@ process GENERATE_CHROMOSOME_PAIRS {
 
 // TODO optimize: trans expected values can be computed in parallel
 process EXPECTED {
+    publishDir "${params.publish_dir}/plots/nchg/",
+        enabled: !!params.publish_dir,
+        mode: params.publish_dir_mode
     tag "$sample"
 
     input:
@@ -406,7 +409,7 @@ process EXPECTED {
             }
         }
 
-        outname="${sample}${suffix}.h5"
+        outname="expected_values_${sample}${suffix}.h5"
         opts=opts.join(" ")
         '''
         NCHG expected \\
