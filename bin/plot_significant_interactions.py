@@ -5,8 +5,9 @@
 
 import argparse
 import pathlib
-from typing import Tuple
+from typing import Dict, Tuple
 
+import h5py
 import hictkpy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,6 +36,13 @@ def make_cli():
     cli.add_argument("chrom2", type=str, help="Name of the second chromosome.")
 
     cli.add_argument("output-path", type=pathlib.Path, help="Path where to store the output plot.")
+
+    cli.add_argument(
+        "--expected-values",
+        type=pathlib.Path,
+        default=None,
+        help="Path to the expected values file in HDF5 format produced by NCHG expected.",
+    )
 
     cli.add_argument(
         "--resolution",
@@ -93,14 +101,44 @@ def import_data(path: str, chrom1: str, chrom2: str) -> pd.DataFrame:
     return df[(df["chrom1"] == chrom1) & (df["chrom2"] == chrom2)]
 
 
-def fetch_hic_matrix(path: pathlib.Path, resolution: int, chrom1: str, chrom2: str) -> Tuple[int, npt.NDArray]:
+def import_expected_values(path: pathlib.Path) -> Dict[Tuple[str, str], Tuple[npt.NDArray, npt.NDArray]]:
+    evs = {}
+    with h5py.File(path) as h5:
+        chrom1 = h5["bin-masks/chrom1"][:]
+        chrom2 = h5["bin-masks/chrom2"][:]
+        offsets1 = h5["bin-masks/offsets1"][:]
+        offsets2 = h5["bin-masks/offsets2"][:]
+
+        values1 = h5["bin-masks/values1"][:]
+        values2 = h5["bin-masks/values2"][:]
+
+        for i, (chrom1, chrom2) in enumerate(zip(chrom1, chrom2)):
+            i0 = offsets1[i]
+            i1 = offsets1[i + 1]
+
+            j0 = offsets2[i]
+            j1 = offsets2[i + 1]
+            evs[(chrom1.decode("utf-8"), chrom2.decode("utf-8"))] = (values1[i0:i1], values2[j0:j1])
+
+    return evs
+
+
+def fetch_hic_matrix(
+    path: pathlib.Path, resolution: int, chrom1: str, chrom2: str, expected_values
+) -> Tuple[int, npt.NDArray]:
     path = str(path)
     if hictkpy.is_hic(path) or hictkpy.is_mcool_file(path):
         if resolution is None:
             raise RuntimeError("--resolution is required when Hi-C matrix is in .hic or .mcool format.")
     f = hictkpy.File(path, resolution)
-    f.fetch(chrom1, chrom2).to_df()
-    return f.resolution(), f.fetch(chrom1, chrom2).to_numpy()
+    m = f.fetch(chrom1, chrom2).to_numpy().astype(float)
+
+    if expected_values is not None:
+        mask1, mask2 = expected_values[(chrom1, chrom2)]
+        m[mask1] = np.nan
+        m[:, mask2] = np.nan
+
+    return f.resolution(), m
 
 
 def df_to_matrix(df: pd.DataFrame, bin_size: int, shape: Tuple[int, int]) -> npt.NDArray:
@@ -124,6 +162,10 @@ def main():
 
     df = import_data(args["parquet"], args["chrom1"], args["chrom2"])
 
+    evs = None
+    if args["expected_values"] is not None:
+        evs = import_expected_values(args["expected_values"])
+
     if "pvalue_corrected" in df:
         pval_col = "pvalue_corrected"
     else:
@@ -131,7 +173,7 @@ def main():
 
     df = df[(df[pval_col] < args["pvalue"]) & (df["log_ratio"] >= args["log_ratio"]) & (~df["log_ratio"].isna())]
 
-    resolution, obs_matrix = fetch_hic_matrix(args["hic-file"], args["resolution"], args["chrom1"], args["chrom2"])
+    resolution, obs_matrix = fetch_hic_matrix(args["hic-file"], args["resolution"], args["chrom1"], args["chrom2"], evs)
 
     sig_matrix = df_to_matrix(df, resolution, obs_matrix.shape)
 
