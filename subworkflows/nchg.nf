@@ -374,7 +374,7 @@ process GENERATE_CHROMOSOME_PAIRS {
 
 // TODO optimize: trans expected values can be computed in parallel
 process EXPECTED {
-    publishDir "${params.publish_dir}/plots/nchg/",
+    publishDir "${params.publish_dir}/nchg/",
         enabled: !!params.publish_dir,
         mode: params.publish_dir_mode
     tag "$sample"
