@@ -9,7 +9,6 @@ on:
     paths:
       - ".github/workflows/ci.yml"
       - ".dockerignore"
-      - "Dockerfile"
       - "env.yml"
       - "main.nf"
       - "nextflow.config"
@@ -20,7 +19,6 @@ on:
     paths:
       - ".github/workflows/ci.yml"
       - ".dockerignore"
-      - "Dockerfile"
       - "env.yml"
       - "main.nf"
       - "nextflow.config"
@@ -44,46 +42,6 @@ env:
   NXF_ANSI_LOG: false
 
 jobs:
-  build-image:
-    name: Build Dockerfile
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          flavor: |
-            latest=true
-          tags: |
-            type=semver,priority=1000,pattern={{version}}
-            type=sha,priority=900
-            type=ref,priority=800,event=branch
-            type=ref,priority=700,event=pr
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image and push to registries
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ github.workspace }}
-          push: ${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=min
-          tags: ${{ steps.meta.outputs.tags }}
-
-
   preproc-test-dataset:
     name: Preprocess test dataset
     runs-on: ubuntu-latest
@@ -120,13 +78,13 @@ jobs:
     - name: Generate requirements.txt
       if: steps.cache-dataset.outputs.cache-hit != 'true'
       run: |
-        echo 'cooler==0.9.1' > requirements.txt
+        echo 'cooler==0.10.0' > requirements.txt
 
     - name: Setup Python
       if: steps.cache-dataset.outputs.cache-hit != 'true'
       uses: actions/setup-python@v5
       with:
-        python-version: 3.9
+        python-version: 3.12
         cache: pip
 
     - name: Remove unused resolutions
@@ -137,9 +95,7 @@ jobs:
 
         pip3 install -r requirements.txt
 
-        for res in 100000 1000000; do
-          cooler cp "$src::/resolutions/$res" "$dest::/resolutions/$res"
-        done
+        cooler cp "$src::/resolutions/100000" "$dest"
 
         mv "$dest" "$src"
 
@@ -147,7 +103,7 @@ jobs:
   test-workflow:
     name: Test workflow
     runs-on: ubuntu-latest
-    needs: [ build-image, preproc-test-dataset ]
+    needs: [ preproc-test-dataset ]
 
     strategy:
       matrix:
@@ -162,6 +118,7 @@ jobs:
         with:
           key: ${{ needs.preproc-test-dataset.outputs.cache-key }}
           path: data/
+          fail-on-cache-miss: true
 
       - name: Install Nextflow
         uses: nf-core/setup-nextflow@v2
@@ -172,12 +129,12 @@ jobs:
         run: |
           nextflow run -c config/test.config \
                        --sample="test" \
-                       --cooler_cis="data/$(basename "$TEST_DATASET_URL")::/resolutions/100000" \
-                       --cooler_trans="data/$(basename "$TEST_DATASET_URL")::/resolutions/1000000" \
+                       --hic_file="data/$(basename "$TEST_DATASET_URL")" \
+                       --resolution=100000 \
                        --outdir=data/out \
-                       --max_cpus=2 \
+                       --max_cpus=$(nproc) \
                        --max_memory=6.GB \
                        --max_time=2.h \
                        .
 
-          ls -lah data/out/test_{all,cis,trans}_{cliques,domains}*.gz
+          ls -lah data/out/cliques/test_cis_{cliques,domains}*.gz
