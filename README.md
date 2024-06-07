@@ -16,7 +16,7 @@ The workflow is largely based on [this](https://github.com/Chrom3D/INC-tutorial)
 
 ### Software requirements
 
-- Nextflow (at least version: v20.07.1. Pipeline was developed using v22.10.8)
+- Nextflow (at least version: v22.10.8. Pipeline was developed using v24.04.2)
 - Docker or Singularity/Apptainer
 
 Running the pipeline without containers is technically possible, but it is not recommended.
@@ -153,33 +153,33 @@ user@dev:/tmp$ nextflow run --max_cpus=8 \
 
  N E X T F L O W   ~  version 24.04.2
 
-Launching `./main.nf` [irreverent_wescoff] DSL2 - revision: 0be6cbedc5
+Launching `https://github.com/robomics/call_tad_cliques` [desperate_easley] DSL2 - revision: f89b6c923c [v0.4.0]
 
 executor >  local (41)
-[7b/fb313f] SAMPLESHEET:CHECK_SYNTAX                                   | 1 of 1 ✔
-[b0/4f77c1] SAMPLESHEET:CHECK_FILES                                    | 1 of 1 ✔
-[0b/0ba9ff] TADS:SELECT_NORMALIZATION_METHOD (example)                 | 1 of 1 ✔
-[09/ca2567] TADS:APPLY_NORMALIZATION (example (50000; weight))         | 1 of 1 ✔
-[da/a14762] TADS:HICEXPLORER_FIND_TADS (example)                       | 1 of 1 ✔
+[c4/ae5ade] SAMPLESHEET:CHECK_SYNTAX                                   | 1 of 1 ✔
+[6a/eca471] SAMPLESHEET:CHECK_FILES                                    | 1 of 1 ✔
+[43/a52d61] TADS:SELECT_NORMALIZATION_METHOD (example)                 | 1 of 1 ✔
+[6b/6a7925] TADS:APPLY_NORMALIZATION (example (50000; weight))         | 1 of 1 ✔
+[34/a35f83] TADS:HICEXPLORER_FIND_TADS (example)                       | 1 of 1 ✔
 [-        ] TADS:COPY                                                  -
-[92/f261fc] NCHG:GENERATE_MASK                                         | 1 of 1 ✔
-[8e/40c02a] NCHG:MASK_DOMAINS (example)                                | 1 of 1 ✔
-[36/f950a6] NCHG:EXPECTED (example)                                    | 1 of 1 ✔
-[bf/6fbee1] NCHG:GENERATE_CHROMOSOME_PAIRS (example)                   | 1 of 1 ✔
-[47/945cac] NCHG:DUMP_CHROM_SIZES (example)                            | 1 of 1 ✔
-[16/bb5e75] NCHG:COMPUTE (example (chr1:chr1))                         | 21 of 21 ✔
-[51/55dfbb] NCHG:MERGE (example (cis))                                 | 1 of 1 ✔
-[f1/196069] NCHG:FILTER (example (cis))                                | 1 of 1 ✔
-[01/c17c93] NCHG:VIEW (example (cis))                                  | 1 of 1 ✔
-[a7/68bab8] NCHG:CONCAT (example)                                      | 1 of 1 ✔
-[bd/e70a4d] NCHG:PLOT_EXPECTED (example)                               | 1 of 1 ✔
-[a4/235495] NCHG:GET_HIC_PLOT_RESOLUTION (example)                     | 1 of 1 ✔
-[78/19ba93] NCHG:PLOT_SIGNIFICANT (example)                            | 1 of 1 ✔
-[76/b21803] CLIQUES:CALL (example)                                     | 1 of 1 ✔
-[e7/812637] CLIQUES:PLOT_MAXIMAL_CLIQUE_SIZE_DISTRIBUTION_BY_TAD (cis) | 1 of 1 ✔
-[b6/d1f15a] CLIQUES:PLOT_CLIQUE_SIZE_DISTRIBUTION (cis)                | 1 of 1 ✔
-Completed at: 07-Jun-2024 16:10:27
-Duration    : 1m 28s
+[27/c7fe33] NCHG:GENERATE_MASK                                         | 1 of 1 ✔
+[3e/21fbf1] NCHG:MASK_DOMAINS (example)                                | 1 of 1 ✔
+[4e/de0183] NCHG:EXPECTED (example)                                    | 1 of 1 ✔
+[a5/1d67bc] NCHG:GENERATE_CHROMOSOME_PAIRS (example)                   | 1 of 1 ✔
+[c8/2ab36d] NCHG:DUMP_CHROM_SIZES (example)                            | 1 of 1 ✔
+[68/a97434] NCHG:COMPUTE (example (chr1:chr1))                         | 21 of 21 ✔
+[ef/423514] NCHG:MERGE (example (cis))                                 | 1 of 1 ✔
+[de/121f6a] NCHG:FILTER (example (cis))                                | 1 of 1 ✔
+[0e/f58cfb] NCHG:VIEW (example (cis))                                  | 1 of 1 ✔
+[e0/15439e] NCHG:CONCAT (example)                                      | 1 of 1 ✔
+[0d/307019] NCHG:PLOT_EXPECTED (example)                               | 1 of 1 ✔
+[7d/27fffc] NCHG:GET_HIC_PLOT_RESOLUTION (example)                     | 1 of 1 ✔
+[ba/c1f985] NCHG:PLOT_SIGNIFICANT (example)                            | 1 of 1 ✔
+[a1/87e559] CLIQUES:CALL (example)                                     | 1 of 1 ✔
+[26/a2cab8] CLIQUES:PLOT_MAXIMAL_CLIQUE_SIZE_DISTRIBUTION_BY_TAD (cis) | 1 of 1 ✔
+[f8/a17299] CLIQUES:PLOT_CLIQUE_SIZE_DISTRIBUTION (cis)                | 1 of 1 ✔
+Completed at: 07-Jun-2024 16:38:56
+Duration    : 1m 21s
 CPU hours   : 0.1
 Succeeded   : 41
 ```
