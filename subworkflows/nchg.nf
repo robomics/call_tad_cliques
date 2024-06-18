@@ -20,24 +20,8 @@ workflow NCHG {
 
         cytoband
         gaps
-        custom_mask
 
     main:
-
-        GENERATE_MASK(
-            make_optional_input(cytoband),
-            make_optional_input(gaps),
-            make_optional_input(custom_mask),
-            params.zstd_compression_lvl
-        )
-
-        MASK_DOMAINS(
-            domains,
-            GENERATE_MASK.out.bed,
-            params.zstd_compression_lvl
-        )
-
-        MASK_DOMAINS.out.set { filtered_domains }
 
         interaction_types = []
         if (params.call_cis_cliques) {
@@ -55,9 +39,25 @@ workflow NCHG {
             }
             .set { hic_files }
 
+        sample_sheet
+            .splitCsv(sep: "\t", header: true)
+            .map { row -> tuple(row.sample, make_optional_input(row.mask))
+            }
+            .set { bin_masks }
+
+        GENERATE_MASK(
+            bin_masks,
+            make_optional_input(cytoband),
+            make_optional_input(gaps),
+            params.zstd_compression_lvl
+        )
+
+        hic_files
+            .combine(bin_masks, by: 0)
+            .set { nchg_expected_tasks }
 
         EXPECTED(
-            hic_files,
+            nchg_expected_tasks,
             interaction_types,
             mad_max
         )
@@ -74,7 +74,7 @@ workflow NCHG {
             .splitCsv(sep: "\t", header: ["sample", "chrom1", "chrom2"])
             .map { tuple(it.sample, it.chrom1, it.chrom2) }
             .combine(hic_files, by: 0)
-            .combine(filtered_domains, by: 0)
+            .combine(domains, by: 0)
             .combine(EXPECTED.out.h5, by: 0)
             .set { nchg_compute_tasks }
 
@@ -222,91 +222,64 @@ process GENERATE_MASK {
     cpus 1
 
     input:
+        tuple val(sample),
+              path(mask)
         path cytoband
         path gaps
-        path other
+
         val zstd_compression_lvl
 
     output:
-        path "mask.bed.zst", emit: bed
+        tuple val(sample),
+              path("*.bed.gz"),
+        emit: bed
 
     shell:
         '''
         set -o pipefail
 
+
+        mkdir tmp/
+        trap 'rm -rf ./tmp/' EXIT
+
         # Implement logic to support optional gaps/cytoband input files
-        touch empty.tmp
+        touch tmp/empty.tmp
 
         if [[ '!{gaps}' == "" ]]; then
-            ln -s empty.tmp gaps
+            ln -s tmp/empty.tmp tmp/gaps
         else
-            ln -s '!{gaps}' gaps
+            ln -s '!{gaps}' tmp/gaps
         fi
 
         if [[ '!{cytoband}' == "" ]]; then
-            ln -s empty.tmp cytoband
+            ln -s tmp/empty.tmp tmp/cytoband
         else
-            ln -s '!{cytoband}' cytoband
+            ln -s '!{cytoband}' tmp/cytoband
         fi
 
-        if [[ '!{other}' == "" ]]; then
-            ln -s empty.tmp other
+        if [[ '!{mask}' == "" ]]; then
+            ln -s tmp/empty.tmp tmp/other
         else
-            ln -s '!{other}' other
+            ln -s '!{mask}' tmp/other
         fi
 
         # Concatenate and sort intervals from gaps and cytoband files,
         # then merge overlapping intervals
 
-        mkfifo gaps.bed.tmp cytoband.bed.tmp other.bed.tmp
-        trap 'rm -f mkfifo gaps.bed.tmp cytoband.bed.tmp other.bed.tmp empty.tmp' EXIT
+        mkfifo tmp/gaps.bed.tmp tmp/cytoband.bed.tmp tmp/other.bed.tmp
 
         # Decompress BED files and select BED3 columns
-        zcat -f gaps | cut -f 2-4 >> gaps.bed.tmp &
-        zcat -f cytoband | grep 'acen$' | cut -f 1-3 >> cytoband.bed.tmp &
-        zcat -f other | cut -f 1-3 >> other.bed.tmp &
+        zcat -f tmp/gaps | cut -f 2-4 >> tmp/gaps.bed.tmp &
+        zcat -f tmp/cytoband | grep 'acen$' | cut -f 1-3 >> tmp/cytoband.bed.tmp &
+        zcat -f tmp/other | cut -f 1-3 >> tmp/other.bed.tmp &
 
         # Concatenate, sort and merge intervals
-        cat *.bed.tmp |
+        cat tmp/*.bed.tmp |
         sort -k1,1V -k2,2n --parallel=!{task.cpus} |
         bedtools merge -i stdin |
-        zstd -T!{task.cpus} \\
-             -!{zstd_compression_lvl} \\
-             -o mask.bed.zst
+        gzip -9 > '__!{sample}.mask.bed.gz'
         '''
 }
-
-process MASK_DOMAINS {
-    label 'duration_very_short'
-    tag "$sample"
-
-    cpus 1
-
-    input:
-        tuple val(sample),
-              path(domains)
-
-        path mask
-        val zstd_compression_lvl
-
-    output:
-        tuple val(sample),
-              path(outname)
-
-    shell:
-        outname=domains.toString().replace(".bed.gz", "_filtered.bed.zst")
-        '''
-        set -o pipefail
-
-        bedtools subtract -A \\
-                          -a <(zcat -f '!{domains}') \\
-                          -b <(zstdcat -f '!{mask}') |
-            zstd -T!{task.cpus} \\
-                 -!{zstd_compression_lvl} \\
-                 -o '!{outname}'
-        '''
-}
-
 
 process DUMP_CHROM_SIZES {
     label 'process_very_short'
@@ -330,7 +303,7 @@ process DUMP_CHROM_SIZES {
 
         chroms = hictkpy.File("!{hic}", int("!{resolution}")).chromosomes()
 
-        with open("!{sample}.chrom.sizes", "w") as f:
+        with open("__!{sample}.chrom.sizes", "w") as f:
             for chrom, size in chroms.items():
                 print(f"{chrom}\\t{size}", file=f)
         '''
@@ -382,7 +355,8 @@ process EXPECTED {
     input:
         tuple val(sample),
               path(hic),
-              val(resolution)
+              val(resolution),
+              path(bin_mask)
 
         val interaction_types
         val mad_max
@@ -411,10 +385,19 @@ process EXPECTED {
 
         outname="expected_values_${sample}${suffix}.h5"
         opts=opts.join(" ")
+
         '''
+        mkdir tmp/
+        bin_mask="$(mktemp -p ./tmp)"
+
+        trap 'rm -rf ./tmp/' EXIT
+
+        zcat -f '!{bin_mask}' > "$bin_mask"
+
         NCHG expected \\
             '!{hic}' \\
             --output='!{outname}' \\
+            --bin-mask="$bin_mask" \\
             !{opts}
         '''
 }

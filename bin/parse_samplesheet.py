@@ -96,6 +96,8 @@ def check_is_valid_bed3(path: pathlib.Path, strip_parent_dirs: bool = True):
         path = file_uri_basename(str(path))
     try:
         df = pd.read_table(path, names=["chrom", "start", "end"], usecols=[0, 1, 2])
+        if len(df) == 0:
+            return
         if df.isnull().values.any():
             raise RuntimeError("found one or more null/nan value(s) in one of the first three columns")
 
@@ -127,6 +129,10 @@ def main():
             if path != "":
                 check_is_valid_bed3(path)
 
+        for path in df["mask"].fillna(""):
+            if path != "":
+                check_is_valid_bed3(path)
+
         paths = [uri.partition("::")[0] for uri in df["hic_file"]]
 
         df["hic_file"] = paths
@@ -135,7 +141,7 @@ def main():
 
 
 if __name__ == "__main__":
-    EXPECTED_COLUMNS = tuple(["sample", "hic_file", "resolution", "tads"])
+    EXPECTED_COLUMNS = tuple(["sample", "hic_file", "resolution", "tads", "mask"])
     args = vars(make_cli().parse_args())
     sample_sheet = args["tsv"]
     detached = args["detached"]
