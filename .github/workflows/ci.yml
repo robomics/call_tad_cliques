@@ -132,7 +132,7 @@ jobs:
           nextflow run -c config/test.config \
                        --sample="test" \
                        --hic_file="data/$(basename "$TEST_DATASET_URL")" \
-                       --mask=mask.bed
+                       --mask=mask.bed \
                        --resolution=100000 \
                        --outdir=data/out \
                        --max_cpus=$(nproc) \
