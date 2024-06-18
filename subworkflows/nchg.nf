@@ -303,7 +303,7 @@ process DUMP_CHROM_SIZES {
 
         chroms = hictkpy.File("!{hic}", int("!{resolution}")).chromosomes()
 
-        with open("__!{sample}.chrom.sizes", "w") as f:
+        with open("!{sample}.chrom.sizes", "w") as f:
             for chrom, size in chroms.items():
                 print(f"{chrom}\\t{size}", file=f)
         '''
@@ -464,7 +464,6 @@ process MERGE {
         input_prefix="${sample}"
         outname="${sample}.${interaction_type}.parquet"
         '''
-        ls -lahL
         NCHG merge '!{input_prefix}' '!{outname}' \\
             --threads='!{task.cpus}'
         '''
