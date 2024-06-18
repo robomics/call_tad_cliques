@@ -127,9 +127,12 @@ jobs:
 
       - name: Test workflow
         run: |
+          printf '%s\t%d\t%d' chr1 0 10000000 > mask.bed
+
           nextflow run -c config/test.config \
                        --sample="test" \
                        --hic_file="data/$(basename "$TEST_DATASET_URL")" \
+                       --mask=mask.bed
                        --resolution=100000 \
                        --outdir=data/out \
                        --max_cpus=$(nproc) \
