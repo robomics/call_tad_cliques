@@ -464,6 +464,7 @@ process MERGE {
         input_prefix="${sample}"
         outname="${sample}.${interaction_type}.parquet"
         '''
+        ls -lahL
         NCHG merge '!{input_prefix}' '!{outname}' \\
             --threads='!{task.cpus}'
         '''
