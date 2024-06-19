@@ -219,6 +219,8 @@ workflow NCHG {
 process GENERATE_MASK {
     label 'duration_very_short'
 
+    tag "$sample"
+
     cpus 1
 
     input:
