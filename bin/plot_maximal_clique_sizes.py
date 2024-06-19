@@ -130,7 +130,8 @@ def plot_maximal_clique_sizes(cliques: Dict[str, pd.DataFrame], stat: str) -> pl
         )
 
         ax.set_xticks(
-            range(df["size"].min(), df["size"].max() + 1), labels=range(df["size"].min(), df["size"].max() + 1)
+            range(df["size"].min(), df["size"].max() + 1),
+            labels=range(df["size"].min(), df["size"].max() + 1),
         )
 
     return fig

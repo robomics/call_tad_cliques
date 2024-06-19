@@ -30,7 +30,8 @@ workflow {
         params.sample,
         params.hic_file,
         params.resolution,
-        params.tads
+        params.tads,
+        params.mask
     )
 
     SAMPLESHEET.out.tsv.set { sample_sheet }
@@ -47,8 +48,7 @@ workflow {
         params.nchg_mad_max,
         params.nchg_bad_bin_fraction,
         params.cytoband,
-        params.assembly_gaps,
-        params.custom_mask,
+        params.assembly_gaps
     )
 
     CLIQUES(

@@ -71,7 +71,10 @@ def make_cli():
         help="Lower bound for the color scale of the log-ratio heatmap.",
     )
     cli.add_argument(
-        "--max-value", type=float, default=None, help="Upper bound for the color scale of the log-ratio heatmap."
+        "--max-value",
+        type=float,
+        default=None,
+        help="Upper bound for the color scale of the log-ratio heatmap.",
     )
 
     return cli
@@ -101,7 +104,9 @@ def import_data(path: str, chrom1: str, chrom2: str) -> pd.DataFrame:
     return df[(df["chrom1"] == chrom1) & (df["chrom2"] == chrom2)]
 
 
-def import_expected_values(path: pathlib.Path) -> Dict[Tuple[str, str], Tuple[npt.NDArray, npt.NDArray]]:
+def import_expected_values(
+    path: pathlib.Path,
+) -> Dict[Tuple[str, str], Tuple[npt.NDArray, npt.NDArray]]:
     evs = {}
     with h5py.File(path) as h5:
         chrom1 = h5["bin-masks/chrom1"][:]
@@ -118,7 +123,10 @@ def import_expected_values(path: pathlib.Path) -> Dict[Tuple[str, str], Tuple[np
 
             j0 = offsets2[i]
             j1 = offsets2[i + 1]
-            evs[(chrom1.decode("utf-8"), chrom2.decode("utf-8"))] = (values1[i0:i1], values2[j0:j1])
+            evs[(chrom1.decode("utf-8"), chrom2.decode("utf-8"))] = (
+                values1[i0:i1],
+                values2[j0:j1],
+            )
 
     return evs
 
@@ -180,7 +188,13 @@ def main():
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(2 * 6.4, 6.4))
 
     img0 = ax0.imshow(obs_matrix, norm=LogNorm(), interpolation="nearest")
-    img1 = ax1.imshow(sig_matrix, vmin=args["min_value"], vmax=args["max_value"], interpolation="nearest", cmap="Reds")
+    img1 = ax1.imshow(
+        sig_matrix,
+        vmin=args["min_value"],
+        vmax=args["max_value"],
+        interpolation="nearest",
+        cmap="Reds",
+    )
 
     ax0.set(xlabel=args["chrom2"], ylabel=args["chrom1"], title="Observed matrix")
     ax1.set(

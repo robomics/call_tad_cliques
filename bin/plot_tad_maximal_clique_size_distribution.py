@@ -104,12 +104,6 @@ def read_cliques(cliques: pathlib.Path, raise_on_empty_files: bool) -> pd.DataFr
     return df.set_index("clique")
 
 
-def compute_counts_minmax(cliques: Iterable[pd.DataFrame]) -> Tuple[int, int]:
-    lb = min((df["size"].min() for df in cliques))
-    ub = max((df["size"].max() for df in cliques))
-    return int(lb), int(ub)
-
-
 def compute_max_tad_clique_size(cliques: pd.DataFrame) -> pd.DataFrame:
     clique_sizes = {}
 
@@ -145,7 +139,8 @@ def plot_maximal_clique_sizes(cliques: Dict[str, pd.DataFrame], stat: str) -> pl
         )
 
         ax.set_xticks(
-            range(df["size"].min(), df["size"].max() + 1), labels=range(df["size"].min(), df["size"].max() + 1)
+            range(df["size"].min(), df["size"].max() + 1),
+            labels=range(df["size"].min(), df["size"].max() + 1),
         )
 
     return fig

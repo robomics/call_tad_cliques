@@ -19,10 +19,12 @@ def parse_sample_sheet_row(row) {
     files = [hic_fname]
 
     tads = make_optional_input(row.tads)
+    mask = make_optional_input(row.mask)
 
     tuple(row.sample,
           files,
-          tads)
+          tads,
+          mask)
 }
 
 
@@ -34,11 +36,13 @@ workflow SAMPLESHEET {
         hic_file
         resolution
         tads
+        mask
 
     main:
         if (sample_sheet) {
             if(sample) log.warn("'sample' parameter is ignored when 'sample_sheet' is defined")
             if(hic_file) log.warn("'hic_file' parameter is ignored when 'sample_sheet' is defined")
+            if(mask) log.warn("'mask' parameter is ignored when 'sample_sheet' is defined")
             if(resolution) log.warn("'resolution' parameter is ignored when 'sample_sheet' is defined")
 
             CHECK_SYNTAX(file(sample_sheet, checkIfExists: true))
@@ -51,7 +55,8 @@ workflow SAMPLESHEET {
                 sample,
                 hic_file,
                 resolution,
-                tads ? tads : ""
+                tads ? tads : "",
+                mask ? mask : ""
             )
 
             CHECK_SYNTAX(GENERATE.out.tsv)
@@ -63,7 +68,8 @@ workflow SAMPLESHEET {
             .splitCsv(sep: "\t", header: true)
             .map {
                     it = parse_sample_sheet_row(it)
-                    it[1] + it[2]  // Concatenate path to coolers and tads (when available)
+                    // Concatenate path to coolers and optional files
+                    it[1] + it[2] + it[3]
             }
             .flatten()
             .unique()
@@ -90,6 +96,7 @@ process GENERATE {
         val hic_file
         val resolution
         val tads
+        val mask
 
     output:
         path "sample_sheet.tsv", emit: tsv
@@ -104,11 +111,12 @@ process GENERATE {
             fi
         done
 
-        printf 'sample\\thic_file\\tresolution\\ttads\\n' > sample_sheet.tsv
-        printf '%s\\t%s\\t%s\\t%s\\n' '!{sample}' \\
+        printf 'sample\\thic_file\\tresolution\\ttads\\tmask\\n' > sample_sheet.tsv
+        printf '%s\\t%s\\t%s\\t%s\\t%s\\n' '!{sample}' \\
                                  '!{hic_file}' \\
                                  '!{resolution}' \\
-                                 '!{tads}' >> sample_sheet.tsv
+                                 '!{tads}' \\
+                                 '!{mask}' >> sample_sheet.tsv
         '''
 }
 
