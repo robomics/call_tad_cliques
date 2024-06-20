@@ -53,7 +53,7 @@ workflow NCHG {
         )
 
         hic_files
-            .combine(bin_masks, by: 0)
+            .combine(GENERATE_MASK.out.bed, by: 0)
             .set { nchg_expected_tasks }
 
         EXPECTED(
