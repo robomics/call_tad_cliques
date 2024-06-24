@@ -25,6 +25,47 @@ include { CLIQUES } from './subworkflows/cliques.nf'
 
 workflow {
 
+    log.info("-- PARAMETERS")
+    log.info("")
+    if (params.sample_sheet) {
+        log.info("-- sample_sheet: ${params.sample_sheet}")
+    } else {
+        log.info("-- sample: ${params.sample}")
+        log.info("-- hic_file: ${params.hic_file}")
+        log.info("-- resolution: ${params.resolution}")
+        log.info("-- tads: ${params.tads}")
+        log.info("-- mask: ${params.mask}")
+    }
+    log.info("-- outdir: ${params.outdir}")
+    log.info("-- publish_dir_mode: ${params.publish_dir_mode}")
+    log.info("-- cytoband: ${params.cytoband}")
+    log.info("-- assembly_gaps: ${params.assembly_gaps}")
+
+    log.info("-- hicexplorer_hic_norm: ${params.hicexplorer_hic_norm}")
+    log.info("-- hicexplorer_cool_norm: ${params.hicexplorer_cool_norm}")
+
+    log.info("-- nchg_mad_max: ${params.nchg_mad_max}")
+    log.info("-- nchg_bad_bin_fraction: ${params.nchg_bad_bin_fraction}")
+
+    log.info("-- nchg_fdr_cis: ${params.nchg_fdr_cis}")
+    log.info("-- nchg_log_ratio_cis: ${params.nchg_log_ratio_cis}")
+    log.info("-- nchg_fdr_trans: ${params.nchg_fdr_trans}")
+    log.info("-- nchg_log_ratio_trans: ${params.nchg_log_ratio_trans}")
+
+    log.info("-- clique_size_thresh: ${params.clique_size_thresh}")
+    log.info("-- call_cis_cliques: ${params.call_cis_cliques}")
+    log.info("-- call_trans_cliques: ${params.call_trans_cliques}")
+
+    log.info("-- plot_format: ${params.plot_format}")
+    log.info("-- hic_tgt_resolution_plots: ${params.hic_tgt_resolution_plots}")
+    log.info("-- plot_sig_interactions_cmap_lb: ${params.plot_sig_interactions_cmap_lb}")
+    log.info("-- plot_sig_interactions_cmap_ub: ${params.plot_sig_interactions_cmap_ub}")
+    log.info("-- skip_expected_plots: ${params.skip_expected_plots}")
+    log.info("-- skip_sign_interaction_plots: ${params.skip_sign_interaction_plots}")
+
+    log.info("-- zstd_compression_lvl: ${params.zstd_compression_lvl}")
+    log.info("")
+
     SAMPLESHEET(
         params.sample_sheet,
         params.sample,
