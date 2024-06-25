@@ -45,4 +45,4 @@ if __name__ == "__main__":
         dfs.append(df.loc[df["type"] == "acen", ["chrom", "start", "end"]])
 
     df = bf.merge(pd.concat(dfs))
-    df.to_csv(sys.stdout, header=False, index=False)
+    df.to_csv(sys.stdout, sep="\t", header=False, index=False)
