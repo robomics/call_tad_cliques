@@ -237,49 +237,17 @@ process GENERATE_MASK {
         emit: bed
 
     shell:
+        opts=["${mask}"]
+        if (!gaps.isEmpty()) {
+            opts.push(gaps)
+        }
+        if (!cytoband.isEmpty()) {
+            opts.push("--cytoband='${cytoband}'")
+        }
+
+        opts=opts.join(" ")
         '''
-        set -o pipefail
-
-
-        mkdir tmp/
-        trap 'rm -rf ./tmp/' EXIT
-
-        # Implement logic to support optional gaps/cytoband input files
-        touch tmp/empty.tmp
-
-        if [[ '!{gaps}' == "" ]]; then
-            ln -s tmp/empty.tmp tmp/gaps
-        else
-            ln -s '!{gaps}' tmp/gaps
-        fi
-
-        if [[ '!{cytoband}' == "" ]]; then
-            ln -s tmp/empty.tmp tmp/cytoband
-        else
-            ln -s '!{cytoband}' tmp/cytoband
-        fi
-
-        if [[ '!{mask}' == "" ]]; then
-            ln -s tmp/empty.tmp tmp/other
-        else
-            ln -s '!{mask}' tmp/other
-        fi
-
-        # Concatenate and sort intervals from gaps and cytoband files,
-        # then merge overlapping intervals
-
-        mkfifo tmp/gaps.bed.tmp tmp/cytoband.bed.tmp tmp/other.bed.tmp
-
-        # Decompress BED files and select BED3 columns
-        zcat -f tmp/gaps | cut -f 2-4 >> tmp/gaps.bed.tmp &
-        zcat -f tmp/cytoband | grep 'acen$' | cut -f 1-3 >> tmp/cytoband.bed.tmp &
-        zcat -f tmp/other | cut -f 1-3 >> tmp/other.bed.tmp &
-
-        # Concatenate, sort and merge intervals
-        cat tmp/*.bed.tmp |
-        sort -k1,1V -k2,2n --parallel=!{task.cpus} |
-        bedtools merge -i stdin |
-        gzip -9 > '__!{sample}.mask.bed.gz'
+        generate_bin_mask !{opts} | gzip -9 > '__!{sample}.mask.bed.gz'
         '''
 }
 

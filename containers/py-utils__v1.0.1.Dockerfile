@@ -12,6 +12,7 @@ RUN micromamba install -y \
         -c conda-forge \
         -c bioconda \
         'python>=3.12' \
+        'bioframe>0.7' \
         'pandas>2' \
         procps-ng \
 && micromamba clean --all -y
