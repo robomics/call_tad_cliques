@@ -238,16 +238,18 @@ process GENERATE_MASK {
 
     shell:
         opts=["${mask}"]
-        if (!gaps.isEmpty()) {
+        if (!gaps.toString().isEmpty()) {
             opts.push(gaps)
         }
-        if (!cytoband.isEmpty()) {
+        if (!cytoband.toString().isEmpty()) {
             opts.push("--cytoband='${cytoband}'")
         }
 
         opts=opts.join(" ")
         '''
-        generate_bin_mask !{opts} | gzip -9 > '__!{sample}.mask.bed.gz'
+        set -o pipefail
+
+        generate_bin_mask.py !{opts} | gzip -9 > '__!{sample}.mask.bed.gz'
         '''
 }
 

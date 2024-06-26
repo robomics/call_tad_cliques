@@ -44,5 +44,5 @@ if __name__ == "__main__":
         df = pd.read_table(args["cytoband"], usecols=[0, 1, 2, 3, 4], names=["chrom", "start", "end", "arm", "type"])
         dfs.append(df.loc[df["type"] == "acen", ["chrom", "start", "end"]])
 
-    df = bf.merge(pd.concat(dfs))
+    df = bf.merge(pd.concat(dfs))[["chrom", "start", "end"]]
     df.to_csv(sys.stdout, sep="\t", header=False, index=False)
