@@ -237,7 +237,10 @@ process GENERATE_MASK {
         emit: bed
 
     shell:
-        opts=["${mask}"]
+        opts=[]
+        if (!mask.toString().isEmpty()) {
+            opts.push(mask)
+        }
         if (!gaps.toString().isEmpty()) {
             opts.push(gaps)
         }
@@ -246,11 +249,18 @@ process GENERATE_MASK {
         }
 
         opts=opts.join(" ")
-        '''
-        set -o pipefail
 
-        generate_bin_mask.py !{opts} | gzip -9 > '__!{sample}.mask.bed.gz'
-        '''
+        if (opts.size() == 0) {
+            '''
+            echo "" | gzip -9 > '__!{sample}.mask.bed.gz'
+            '''
+        } else {
+            '''
+            set -o pipefail
+
+            generate_bin_mask.py !{opts} | gzip -9 > '__!{sample}.mask.bed.gz'
+            '''
+        }
 }
 
 process DUMP_CHROM_SIZES {
