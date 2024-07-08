@@ -130,7 +130,7 @@ process MASK {
         set -o pipefail
 
         mask_cliques.py '!{cliques}' '!{domains}' !{opts} |
-            gzip -9 > '!{outname}_cliques.tsv.gz'
+            gzip -9 > '!{outprefix}_cliques.tsv.gz'
 
         cp '!{domains}' '!{outprefix}_domains.bed.gz'
         '''
