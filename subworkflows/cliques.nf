@@ -47,6 +47,7 @@ workflow CLIQUES {
         )
 
         MASK.out.cliques
+            .map { tuple(it[1], it[3]) }
             .groupTuple()
             .set { cliques }
 
