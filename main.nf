@@ -5,22 +5,21 @@
 
 nextflow.enable.dsl=2
 
-
-def row_to_tuple(row) {
-    tuple(row.sample,
-          file(row.cooler_cis, checkIfExists: true),
-          file(row.cooler_trans, checkIfExists: true),
-          row.tads,
-          row.cis_resolution,
-          row.trans_resolution)
-}
-
 params.publish_dir = params.outdir
 
 include { SAMPLESHEET } from './subworkflows/samplesheet.nf'
 include { TADS } from './subworkflows/tads.nf'
 include { NCHG } from './subworkflows/nchg.nf'
 include { CLIQUES } from './subworkflows/cliques.nf'
+
+
+// Workaround for optional input files: https://github.com/nextflow-io/nextflow/issues/1694
+def make_optional_input(path) {
+    if (path?.trim()) {
+        return [file(path)]
+    }
+    return []
+}
 
 
 workflow {
@@ -92,9 +91,17 @@ workflow {
         params.assembly_gaps
     )
 
+
+    sample_sheet
+        .splitCsv(sep: "\t", header: true)
+        .map { row -> tuple(row.sample, make_optional_input(row.mask))
+        }
+        .set { masks }
+
     CLIQUES(
         NCHG.out.tsv,
         TADS.out.tsv,
+        masks,
         params.clique_size_thresh
     )
 }

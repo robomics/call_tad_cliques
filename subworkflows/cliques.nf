@@ -15,6 +15,7 @@ workflow CLIQUES {
     take:
         significant_interactions
         tads
+        mask
         clique_size_thresh
 
 
@@ -38,8 +39,14 @@ workflow CLIQUES {
             clique_size_thresh
         )
 
-        CALL.out.cliques
-            .map { tuple(it[1], it[3]) }
+        CALL.out.cliques.join(mask)
+            .set { mask_tasks }
+
+        MASK(
+            mask_tasks
+        )
+
+        MASK.out.tsv
             .groupTuple()
             .set { cliques }
 
@@ -55,9 +62,6 @@ workflow CLIQUES {
 
 
 process CALL {
-    publishDir "${params.publish_dir}/cliques",
-        enabled: !!params.publish_dir,
-        mode: params.publish_dir_mode
     tag "$id"
 
     cpus 1
@@ -78,7 +82,7 @@ process CALL {
         emit: cliques
 
     shell:
-        outprefix="${id}_${interaction_type}"
+        outprefix="${id}_${interaction_type}.unfiltered"
         '''
         call_cliques.py \\
             '!{tads}' \\
@@ -88,6 +92,44 @@ process CALL {
             --clique-size-threshold=!{min_clique_size}
 
         gzip -9 *.{bed,tsv}
+        '''
+}
+
+process MASK {
+    publishDir "${params.publish_dir}/cliques",
+        enabled: !!params.publish_dir,
+        mode: params.publish_dir_mode
+    tag "$id"
+
+    cpus 1
+
+    input:
+        tuple val(id),
+              val(interaction_type),
+              path(domains),
+              path(cliques),
+              path(mask)
+
+    output:
+        tuple val(id),
+              val(interaction_type),
+              path("*.bed.gz", includeInputs: true),
+              path("*.tsv.gz"),
+        emit: cliques
+
+    shell:
+        opts=[]
+        if (!mask.toString().isEmpty()) {
+            opts.push(mask)
+        }
+
+        opts=opts.join(" ")
+        outname="${id}_${interaction_type}_cliques.tsv.gz"
+        '''
+        set -o pipefail
+
+        mask_cliques.py '!{cliques}' '!{domains}' !{opts} |
+            gzip -9 > '!{outname}'
         '''
 }
 
