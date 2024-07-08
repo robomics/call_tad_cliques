@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     rows = []
     for name, df in cliques.groupby("name"):
-        if df.isnull().any():
+        if df.isnull().any().any():
             continue
         rows.append([name, ",".join(df["tad_ids"]), len(df)])
 
