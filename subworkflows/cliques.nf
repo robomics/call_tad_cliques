@@ -46,7 +46,7 @@ workflow CLIQUES {
             mask_tasks
         )
 
-        MASK.out.tsv
+        MASK.out.cliques
             .groupTuple()
             .set { cliques }
 
