@@ -121,7 +121,7 @@ process MASK {
     shell:
         opts=[]
         if (!mask.toString().isEmpty()) {
-            opts.push(mask)
+            opts.push("--mask='${mask}'")
         }
 
         opts=opts.join(" ")
