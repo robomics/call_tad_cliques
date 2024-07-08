@@ -8,21 +8,21 @@ on:
     branches: [ main, devel ]
     paths:
       - ".github/workflows/ci.yml"
+      - "bin/*.py"
+      - "subworkflows/*.nf"
       - ".dockerignore"
-      - "env.yml"
       - "main.nf"
       - "nextflow.config"
-      - "bin/*.py"
 
 
   pull_request:
     paths:
       - ".github/workflows/ci.yml"
+      - "bin/*.py"
+      - "subworkflows/*.nf"
       - ".dockerignore"
-      - "env.yml"
       - "main.nf"
       - "nextflow.config"
-      - "bin/*.py"
 
   release:
     types: [ published ]
