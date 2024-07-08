@@ -114,7 +114,7 @@ process MASK {
     output:
         tuple val(id),
               val(interaction_type),
-              path("*.bed.gz", includeInputs: true),
+              path("*.bed.gz"),
               path("*.tsv.gz"),
         emit: cliques
 
@@ -125,12 +125,14 @@ process MASK {
         }
 
         opts=opts.join(" ")
-        outname="${id}_${interaction_type}_cliques.tsv.gz"
+        outprefix="${id}_${interaction_type}"
         '''
         set -o pipefail
 
         mask_cliques.py '!{cliques}' '!{domains}' !{opts} |
-            gzip -9 > '!{outname}'
+            gzip -9 > '!{outname}_cliques.tsv.gz'
+
+        cp '!{domains}' '!{outprefix}_domains.bed.gz'
         '''
 }
 
